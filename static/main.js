@@ -920,13 +920,16 @@ function initJarvisCanvas() {
 function resizeJarvisCanvas() {
     const cc = document.getElementById('canvas-container');
     if (!cc || !jCanvas) return;
-    const r = cc.getBoundingClientRect();
-    jCanvas.style.left   = r.left   + 'px';
-    jCanvas.style.top    = r.top    + 'px';
-    jCanvas.style.width  = r.width  + 'px';
-    jCanvas.style.height = r.height + 'px';
-    jCanvas.width  = r.width;
-    jCanvas.height = r.height;
+    const r  = cc.getBoundingClientRect();
+    const vw = window.innerWidth;
+    // body に transform:scaleX(-1) があるため CSS 座標は左右反転している。
+    // getBoundingClientRect() は視覚座標を返すので CSS left を逆算する。
+    jCanvas.style.left   = (vw - r.right) + 'px';
+    jCanvas.style.top    = r.top          + 'px';
+    jCanvas.style.width  = r.width        + 'px';
+    jCanvas.style.height = r.height       + 'px';
+    jCanvas.width  = Math.round(r.width);
+    jCanvas.height = Math.round(r.height);
 }
 
 function drawJarvis() {
