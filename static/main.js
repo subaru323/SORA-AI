@@ -823,8 +823,10 @@ function animateParticles() {
             rgbArr = BLUE;
         } else {
             const ec2 = EMOTION_COLORS[emo];
-            // 6秒周期でゆっくり青↔感情色を往復
-            const f = (Math.sin(tSec * Math.PI / 3) + 1) / 2;
+            // 6秒周期。pow(0.25)でf=1(青)側に大きく偏らせ、
+            // 感情色はサイクルの約15%だけ短く現れる
+            const fRaw = (Math.sin(tSec * Math.PI / 3) + 1) / 2;  // 0-1
+            const f    = Math.pow(fRaw, 0.25);  // < 1 で青寄りにバイアス
             rgbArr = BLUE.map((v, i) => Math.round(v + (ec2[i] - v) * (1 - f)));
         }
         const rgb = rgbArr.join(',');
