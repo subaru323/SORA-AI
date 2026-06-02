@@ -11,7 +11,7 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 from google import genai
 import config
-from visitors import compute_face_hash, find_visitor, register_visitor, update_visitor, log_visit
+from visitors import compute_encoding, find_visitor, register_visitor, update_visitor, log_visit
 
 class CameraSensor:
     def __init__(self):
@@ -65,7 +65,7 @@ class CameraSensor:
         consecutive_face_frames = 0
 
         while self.running:
-            if config.is_interacting:
+            if config.is_interacting and not config.registration_mode:
                 time.sleep(0.1)
                 continue
 
@@ -140,15 +140,27 @@ class CameraSensor:
                     objects_str = "、".join(detected_objects) if detected_objects else "特になし"
                     local_features = f"物理距離: {proximity_status} / 持ち物: [{objects_str}]"
 
-                    # ── 来場者認識 ──────────────────────────────────────
+                    # ── 登録モード中はフレームをバッファへ ─────────────
+                    if config.registration_mode and target_face_bbox is not None:
+                        try:
+                            bx = target_face_bbox.origin_x
+                            by = target_face_bbox.origin_y
+                            bw = target_face_bbox.width
+                            bh = target_face_bbox.height
+                            reg_crop = frame[by:by+bh, bx:bx+bw]
+                            if reg_crop.size > 0:
+                                config.registration_frame_buffer.append(reg_crop.copy())
+                        except Exception:
+                            pass
+
+                    # ── 来場者認識（通常モード） ─────────────────────────
                     visitor_info = ""
                     try:
                         bx, by = target_face_bbox.origin_x, target_face_bbox.origin_y
                         bw, bh = target_face_bbox.width, target_face_bbox.height
                         face_crop = frame[by:by+bh, bx:bx+bw]
                         if face_crop.size > 0:
-                            face_hash = compute_face_hash(face_crop)
-                            visitor   = find_visitor(face_hash)
+                            visitor = find_visitor(face_crop)
                             if visitor:
                                 update_visitor(visitor["id"])
                                 vc = visitor["visit_count"]
@@ -156,7 +168,7 @@ class CameraSensor:
                                 log_visit(visitor["id"])
                                 custom_log(" INFO ", "CAMERA", f"リピーター検知: Visitor-{visitor['id']} ({vc}回目)")
                             else:
-                                new_v = register_visitor(face_hash)
+                                new_v = register_visitor(face_crop)
                                 log_visit(new_v["id"])
                                 visitor_info = " / 初来場"
                                 custom_log(" INFO ", "CAMERA", f"新規来場者登録: Visitor-{new_v['id']}")

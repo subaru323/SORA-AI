@@ -38,7 +38,7 @@ os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
 import config
 from camera import CameraSensor
 from memory import get_memory_context, save_memory, get_all_memories
-from visitors import get_stats
+from visitors import get_stats, compute_best_encoding, register_visitor_with_angles
 
 camera_sensor = None
 LOG_LEVEL_ORDER = {"DEBUG": 10, "INFO": 20, "WARN": 30, "ERROR": 40}
@@ -217,6 +217,8 @@ Webカメラが目となっており、正面の空間を認識できます。
   [command:game=END]    ← 終了条件成立時に付ける
   ＜会話リセット＞
   [command:history=RESET]  ← ユーザーが話題転換・リセットを求めた時
+  ＜顔登録＞
+  [command:register=FACE]  ← ユーザーが「顔を覚えてほしい」「登録して」と求めた時
 
 【応答スタイル（文脈で切り替える）】
 ■ 通常会話・挨拶
@@ -576,6 +578,11 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 await websocket.send_json({"type": "end"})
 
+            elif data.get("type") == "face_register_start":
+                mark_user_activity()
+                asyncio.create_task(handle_face_registration(websocket))
+                continue
+
             elif data.get("type") == "end_interaction":
                 config.is_interacting = False
                 custom_log("INFO  ", "SYSTEM", "対話ライフサイクルの完全終了・カメラ検知ゲートの再開放完了")
@@ -588,6 +595,74 @@ async def websocket_endpoint(websocket: WebSocket):
         # セッション記憶の保存（会話が2往復以上あった場合のみ）
         if len(session_log) >= 4:
             asyncio.create_task(_save_session_memory(session_log))
+
+
+async def handle_face_registration(websocket):
+    """3角度（正面・左・右）の顔を撮影して来場者として登録する"""
+    STEPS = [
+        ("front", "マスク・帽子を外して、まっすぐ前を向いてください。3秒後に撮影します。"),
+        ("left",  "少し左を向いてください。3秒後に撮影します。"),
+        ("right", "少し右を向いてください。3秒後に撮影します。"),
+    ]
+    collected = {}
+
+    custom_log("INFO  ", "SYSTEM", "顔登録シーケンス開始")
+    for i, (angle, instruction) in enumerate(STEPS):
+        # 音声指示を生成して送信
+        mp3 = await generate_cloud_audio(
+            instruction,
+            config.system_settings["voice"],
+            config.system_settings["rate"],
+            config.system_settings["pitch"],
+        )
+        payload = {
+            "type":        "register_step",
+            "step":        i + 1,
+            "total":       len(STEPS),
+            "angle":       angle,
+            "instruction": instruction,
+        }
+        if mp3:
+            payload["audio"] = base64.b64encode(mp3).decode()
+        await websocket.send_json(payload)
+
+        # ポーズ待機（3秒）
+        await asyncio.sleep(3)
+
+        # フレームキャプチャ（2秒間）
+        config.registration_frame_buffer = []
+        config.registration_mode = True
+        await asyncio.sleep(2)
+        config.registration_mode = False
+
+        frames = config.registration_frame_buffer.copy()
+        config.registration_frame_buffer = []
+
+        if frames:
+            enc = compute_best_encoding(frames)
+            if enc:
+                collected[angle] = enc
+                custom_log("INFO  ", "SYSTEM", f"登録フレーム取得完了: {angle} ({len(frames)}枚)")
+        await websocket.send_json({"type": "register_captured", "angle": angle})
+
+    if collected:
+        from visitors import register_visitor_with_angles
+        visitor = register_visitor_with_angles(collected)
+        done_text = f"登録完了しました。{len(collected)}方向のデータを取得しました。次回からお顔を認識いたします。"
+        mp3 = await generate_cloud_audio(
+            done_text,
+            config.system_settings["voice"],
+            config.system_settings["rate"],
+            config.system_settings["pitch"],
+        )
+        payload = {"type": "register_done", "visitor_id": visitor["id"]}
+        if mp3:
+            payload["audio"] = base64.b64encode(mp3).decode()
+        await websocket.send_json(payload)
+        custom_log("INFO  ", "SYSTEM", f"顔登録完了: Visitor-{visitor['id']} ({len(collected)}角度)")
+    else:
+        await websocket.send_json({"type": "register_failed"})
+        custom_log("WARN  ", "SYSTEM", "顔登録失敗: フレームを取得できませんでした")
 
 
 async def _save_session_memory(session_log: list[dict]):

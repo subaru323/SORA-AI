@@ -270,6 +270,11 @@ function connectWebSocket() {
         if (!isStarted) return;
         const msg = JSON.parse(event.data);
 
+        if (['register_step','register_captured','register_done','register_failed'].includes(msg.type)) {
+            handleRegisterMessage(msg);
+            return;
+        }
+
         if (msg.type === 'camera_preview') {
             const previewImg = document.getElementById('camera-preview');
             if (previewImg) {
@@ -524,6 +529,9 @@ function executeVoiceCommand(cmd) {
         const base = `brightness(${pBright.value}) contrast(${pContrast.value}) saturate(${pSaturate.value})`;
         filterContainer.style.filter = col ? `${base} ${col}` : base;
 
+    } else if (cmd.key === 'register' && cmd.value === 'FACE') {
+        startFaceRegistration();
+
     } else if (cmd.key === 'game') {
         updateGameBadge(cmd.value === 'START');
 
@@ -769,6 +777,95 @@ function animateParticles() {
         particleCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         particleCtx.fill();
         particleCtx.restore();
+    }
+}
+
+// ── Face Registration Flow ────────────────────────────────────
+function startFaceRegistration() {
+    const overlay = document.getElementById('register-overlay');
+    if (!overlay) return;
+    overlay.classList.add('active');
+    setRegStatus('カメラ起動中...');
+    // カメラプレビューを登録UIにも流す
+    _syncRegPreview();
+    if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'face_register_start' }));
+    }
+}
+
+function endFaceRegistration(success = true) {
+    const overlay = document.getElementById('register-overlay');
+    if (overlay) {
+        setTimeout(() => overlay.classList.remove('active'), 2000);
+    }
+    document.getElementById('register-scan')?.classList.remove('active');
+    setRegStatus(success ? '✓ 登録完了' : '✗ 登録失敗');
+}
+
+function setRegStep(step, total) {
+    for (let i = 1; i <= 3; i++) {
+        const el = document.getElementById(`reg-step-${i}`);
+        if (!el) continue;
+        el.classList.remove('active', 'done');
+        if (i < step)      el.classList.add('done');
+        else if (i === step) el.classList.add('active');
+    }
+}
+
+function setRegStatus(text) {
+    const el = document.getElementById('register-status');
+    if (el) el.textContent = text;
+}
+
+function setRegInstruction(text) {
+    const el = document.getElementById('register-instruction-text');
+    if (el) el.textContent = text;
+}
+
+function _syncRegPreview() {
+    // カメラプレビュー画像をコピーして登録画面にも表示
+    const src = document.getElementById('camera-preview');
+    const dst = document.getElementById('register-preview-img');
+    if (!src || !dst) return;
+    if (src.src && src.src !== dst.src) dst.src = src.src;
+    setTimeout(_syncRegPreview, 100);
+}
+
+// ws.onmessage に register_step / register_captured / register_done を処理
+function handleRegisterMessage(msg) {
+    if (msg.type === 'register_step') {
+        setRegStep(msg.step, msg.total);
+        setRegInstruction(msg.instruction);
+        setRegStatus(`STEP ${msg.step} / ${msg.total} — 3秒後に撮影`);
+        document.getElementById('register-scan')?.classList.remove('active');
+        if (msg.audio) {
+            const buf = bytesToBuffer(msg.audio);
+            audioCtx?.decodeAudioData(buf).then(decoded => {
+                const src = audioCtx.createBufferSource();
+                src.buffer = decoded;
+                src.connect(audioCtx.destination);
+                src.start(0);
+            }).catch(() => {});
+        }
+    } else if (msg.type === 'register_captured') {
+        document.getElementById('register-scan')?.classList.add('active');
+        setRegStatus(`${msg.angle.toUpperCase()} — 撮影完了 ✓`);
+    } else if (msg.type === 'register_done') {
+        setRegInstruction('登録完了しました');
+        endFaceRegistration(true);
+        if (msg.audio) {
+            const buf = bytesToBuffer(msg.audio);
+            audioCtx?.decodeAudioData(buf).then(decoded => {
+                const src = audioCtx.createBufferSource();
+                src.buffer = decoded;
+                if (window.audioGainNode) src.connect(window.audioGainNode);
+                else src.connect(audioCtx.destination);
+                src.start(0);
+            }).catch(() => {});
+        }
+    } else if (msg.type === 'register_failed') {
+        setRegInstruction('登録に失敗しました');
+        endFaceRegistration(false);
     }
 }
 
