@@ -775,68 +775,76 @@ function animateParticles() {
     particleCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
 
     // ── JARVIS リング・クロスヘア描画 ────────────────────────
-    jAngle += 0.003;
+    jAngle += 0.0025;
     const W = particleCanvas.width, H = particleCanvas.height;
     if (W > 0 && H > 0) {
-        const cx = W / 2, cy = H / 2;
+        // アバターの視覚的重心に合わせてリング中心をわずかに上方へ
+        const cx = W * 0.5;
+        const cy = H * 0.47;
         const D  = Math.min(W, H);
-        const rO = D * 0.44, rM = D * 0.32, rI = D * 0.18;
-        // CSS変数から感情カラー取得
+        const rO = D * 0.46;   // 外リング（目盛り）
+        const rS = D * 0.40;   // セグメントリング
+        const rM = D * 0.32;   // 中間リング
+        const rI = D * 0.18;   // 内リング
+
         const ec  = getComputedStyle(document.documentElement).getPropertyValue('--ec').trim() || '#00d4ff';
         const rgb = ec.startsWith('#')
             ? `${parseInt(ec.slice(1,3),16)},${parseInt(ec.slice(3,5),16)},${parseInt(ec.slice(5,7),16)}`
             : '0,212,255';
 
-        // Outer ring + 目盛り（回転）
+        // ── 1. 外リング＋72目盛り（正回転）
         particleCtx.save();
         particleCtx.translate(cx, cy);
-        particleCtx.rotate(jAngle);
-        jRing(particleCtx, 0, 0, rO, rgb, 3, 1.0);
+        particleCtx.rotate(jAngle * 0.8);
+        jRing(particleCtx, 0, 0, rO, rgb, 2, 0.65);
         jTicks(particleCtx, 0, 0, rO, rgb);
-        [0, Math.PI/2, Math.PI, Math.PI*3/2].forEach(a => {
-            particleCtx.beginPath();
-            particleCtx.arc(Math.cos(a)*rO, Math.sin(a)*rO, 5, 0, Math.PI*2);
-            particleCtx.fillStyle = ec;
-            particleCtx.shadowColor = ec; particleCtx.shadowBlur = 14;
-            particleCtx.fill(); particleCtx.shadowBlur = 0;
-        });
         particleCtx.restore();
 
-        // Mid ring（逆回転）
+        // ── 2. セグメントリング（逆回転・6分割）
+        jSegRing(particleCtx, cx, cy, rS, rgb, 5, 0.9, 6, -jAngle * 1.1);
+
+        // ── 3. カーディナルマーカー（セグメントリングの外側）
+        jCardinal(particleCtx, cx, cy, rS + 14, rgb);
+
+        // ── 4. 中間リング（逆回転）
         particleCtx.save();
         particleCtx.translate(cx, cy);
-        particleCtx.rotate(-jAngle * 0.65);
-        jRing(particleCtx, 0, 0, rM, rgb, 2, 0.85);
+        particleCtx.rotate(-jAngle * 0.6);
+        jRing(particleCtx, 0, 0, rM, rgb, 2.5, 0.8);
+        // 45°に小マーカー
         [45,135,225,315].forEach(deg => {
             const a = deg * Math.PI / 180;
             particleCtx.beginPath();
-            particleCtx.arc(Math.cos(a)*rM, Math.sin(a)*rM, 3, 0, Math.PI*2);
-            particleCtx.fillStyle = ec;
-            particleCtx.shadowColor = ec; particleCtx.shadowBlur = 8;
+            particleCtx.arc(Math.cos(a)*rM, Math.sin(a)*rM, 4, 0, Math.PI*2);
+            particleCtx.fillStyle = `rgba(${rgb},1)`;
+            particleCtx.shadowColor = `rgba(${rgb},1)`; particleCtx.shadowBlur = 10;
             particleCtx.fill(); particleCtx.shadowBlur = 0;
         });
         particleCtx.restore();
 
-        // Inner ring（静止・グロー）
-        jRing(particleCtx, cx, cy, rI, rgb, 3, 1.0);
-        jRing(particleCtx, cx, cy, rI * 0.72, rgb, 1.5, 0.5);
+        // ── 5. 内リング（強グロー）
+        jRing(particleCtx, cx, cy, rI, rgb, 3.5, 1.0);
+        jRing(particleCtx, cx, cy, rI * 0.68, rgb, 1.5, 0.45);
 
-        // クロスヘア
+        // ── 6. 軌道ピップ（外リング上を一周）
+        jOrbitalPip(particleCtx, cx, cy, rO, rgb, jAngle * 2.2);
+
+        // ── 7. クロスヘア
         jCross(particleCtx, cx, cy, W, H, rgb);
 
-        // コーナーブラケット
-        jCorners(particleCtx, W, H, rgb, 42);
+        // ── 8. コーナーブラケット
+        jCorners(particleCtx, W, H, rgb, 44);
 
-        // 発話パルス
+        // ── 9. 発話パルス（同心円が外に広がる）
         if (window.isSpeaking) {
             const t = Date.now() / 1000;
-            [0, 0.7, 1.4].forEach(off => {
-                const prog  = ((t + off) % 2) / 2;
-                const pr    = rI + (rO - rI) * prog;
+            [0, 0.55, 1.1].forEach(off => {
+                const prog = ((t + off) % 1.8) / 1.8;
+                const pr   = rI + (rO - rI) * prog;
                 particleCtx.beginPath();
-                particleCtx.arc(cx, cy, pr, 0, Math.PI*2);
-                particleCtx.strokeStyle = `rgba(${rgb},${0.6*(1-prog)})`;
-                particleCtx.lineWidth = 2;
+                particleCtx.arc(cx, cy, rI + (rO - rI) * prog, 0, Math.PI*2);
+                particleCtx.strokeStyle = `rgba(${rgb},${0.7*(1-prog)})`;
+                particleCtx.lineWidth = 2.5;
                 particleCtx.stroke();
             });
         }
@@ -985,60 +993,133 @@ function setSysNet(online) {
 // ── JARVIS Drawing Helpers ────────────────────────────────────
 let jAngle = 0;
 
+/** 実線リング */
 function jRing(ctx, x, y, r, color, lw, alpha) {
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.strokeStyle = `rgba(${color},${alpha})`;
     ctx.lineWidth = lw;
     ctx.shadowColor = `rgba(${color},1)`;
-    ctx.shadowBlur = 28;
-    ctx.stroke();
-    // 2重描画でグローを強調
-    ctx.stroke();
+    ctx.shadowBlur = 22;
+    ctx.stroke(); ctx.stroke(); // 二重でグロー強調
     ctx.shadowBlur = 0;
 }
 
+/** セグメント（分割）リング */
+function jSegRing(ctx, x, y, r, color, lw, alpha, segs, rotation) {
+    const gap = 0.18;
+    const segArc = (Math.PI * 2 / segs) * (1 - gap);
+    for (let i = 0; i < segs; i++) {
+        const start = rotation + (Math.PI * 2 / segs) * i;
+        ctx.beginPath();
+        ctx.arc(x, y, r, start, start + segArc);
+        ctx.strokeStyle = `rgba(${color},${alpha})`;
+        ctx.lineWidth = lw;
+        ctx.shadowColor = `rgba(${color},0.9)`;
+        ctx.shadowBlur = 14;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+    }
+}
+
+/** 目盛りリング */
 function jTicks(ctx, x, y, r, color) {
     for (let i = 0; i < 72; i++) {
         const a   = (i * Math.PI * 2 / 72) - Math.PI / 2;
         const maj = i % 9 === 0, med = i % 3 === 0;
-        const len = maj ? 16 : (med ? 9 : 4);
-        const op  = maj ? 0.9 : (med ? 0.5 : 0.2);
+        const len = maj ? 18 : (med ? 10 : 5);
+        const op  = maj ? 1.0 : (med ? 0.55 : 0.22);
         ctx.beginPath();
         ctx.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
         ctx.lineTo(x + Math.cos(a) * (r - len), y + Math.sin(a) * (r - len));
         ctx.strokeStyle = `rgba(${color},${op})`;
-        ctx.lineWidth = maj ? 2 : 1;
+        ctx.lineWidth = maj ? 2.5 : 1;
+        if (maj) { ctx.shadowColor = `rgba(${color},1)`; ctx.shadowBlur = 8; }
         ctx.stroke();
+        ctx.shadowBlur = 0;
     }
 }
 
-function jCross(ctx, cx, cy, W, H, color) {
-    [[0,cy,W,cy],[cx,0,cx,H]].forEach(([x0,y0,x1,y1]) => {
-        const g = ctx.createLinearGradient(x0,y0,x1,y1);
-        g.addColorStop(0,   `rgba(${color},0)`);
-        g.addColorStop(0.35,`rgba(${color},0.5)`);
-        g.addColorStop(0.5, `rgba(${color},0.9)`);
-        g.addColorStop(0.65,`rgba(${color},0.5)`);
-        g.addColorStop(1,   `rgba(${color},0)`);
-        ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1);
-        ctx.strokeStyle = g; ctx.lineWidth = 1;
-        ctx.shadowColor = `rgba(${color},0.6)`; ctx.shadowBlur = 4;
-        ctx.stroke(); ctx.shadowBlur = 0;
+/** カーディナルマーカー（三角形） */
+function jCardinal(ctx, cx, cy, r, color) {
+    [0, Math.PI/2, Math.PI, Math.PI*3/2].forEach((a, idx) => {
+        const mx = cx + Math.cos(a) * r;
+        const my = cy + Math.sin(a) * r;
+        const s  = idx % 2 === 0 ? 9 : 7; // N/S: larger, E/W: smaller
+        ctx.save();
+        ctx.translate(mx, my);
+        ctx.rotate(a + Math.PI/2);
+        ctx.beginPath();
+        ctx.moveTo(0, -s);
+        ctx.lineTo(s*0.6, s*0.5);
+        ctx.lineTo(-s*0.6, s*0.5);
+        ctx.closePath();
+        ctx.fillStyle = `rgba(${color},0.95)`;
+        ctx.shadowColor = `rgba(${color},1)`;
+        ctx.shadowBlur = 14;
+        ctx.fill();
+        ctx.restore();
+        ctx.shadowBlur = 0;
     });
-    ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI*2);
-    ctx.fillStyle = `rgba(${color},1)`;
-    ctx.shadowColor = `rgba(${color},1)`; ctx.shadowBlur = 12;
-    ctx.fill(); ctx.shadowBlur = 0;
 }
 
+/** 軌道ピップ（1点が外リングを周回） */
+function jOrbitalPip(ctx, cx, cy, r, color, angle) {
+    const x = cx + Math.cos(angle) * r;
+    const y = cy + Math.sin(angle) * r;
+    ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(${color},1)`;
+    ctx.shadowColor = `rgba(${color},1)`; ctx.shadowBlur = 18;
+    ctx.fill(); ctx.shadowBlur = 0;
+    // テール（後尾に残光）
+    for (let i = 1; i <= 6; i++) {
+        const ta = angle - i * 0.07;
+        const tx = cx + Math.cos(ta) * r;
+        const ty = cy + Math.sin(ta) * r;
+        ctx.beginPath(); ctx.arc(tx, ty, 4 - i*0.5, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(${color},${0.5 - i*0.08})`;
+        ctx.fill();
+    }
+}
+
+/** クロスヘア（十字＋斜め45°） */
+function jCross(ctx, cx, cy, W, H, color) {
+    // 十字
+    [[0,cy,W,cy],[cx,0,cx,H]].forEach(([x0,y0,x1,y1]) => {
+        const g = ctx.createLinearGradient(x0,y0,x1,y1);
+        g.addColorStop(0,    `rgba(${color},0)`);
+        g.addColorStop(0.3,  `rgba(${color},0.45)`);
+        g.addColorStop(0.5,  `rgba(${color},0.85)`);
+        g.addColorStop(0.7,  `rgba(${color},0.45)`);
+        g.addColorStop(1,    `rgba(${color},0)`);
+        ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1);
+        ctx.strokeStyle = g; ctx.lineWidth = 1;
+        ctx.shadowColor = `rgba(${color},0.5)`; ctx.shadowBlur = 4;
+        ctx.stroke(); ctx.shadowBlur = 0;
+    });
+    // 中心ドット
+    ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(${color},1)`;
+    ctx.shadowColor = `rgba(${color},1)`; ctx.shadowBlur = 16;
+    ctx.fill(); ctx.shadowBlur = 0;
+    // 内十字（短い実線）
+    const cl = 30;
+    [[cx-cl,cy,cx+cl,cy],[cx,cy-cl,cx,cy+cl]].forEach(([x0,y0,x1,y1]) => {
+        ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1);
+        ctx.strokeStyle = `rgba(${color},0.9)`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+    });
+}
+
+/** コーナーブラケット */
 function jCorners(ctx, W, H, color, s) {
     [[0,0,1,1],[W,0,-1,1],[0,H,1,-1],[W,H,-1,-1]].forEach(([x,y,sx,sy]) => {
         ctx.beginPath();
         ctx.moveTo(x+sx*s, y); ctx.lineTo(x,y); ctx.lineTo(x,y+sy*s);
-        ctx.strokeStyle = `rgba(${color},0.85)`;
+        ctx.strokeStyle = `rgba(${color},0.9)`;
         ctx.lineWidth = 3;
-        ctx.shadowColor = `rgba(${color},1)`; ctx.shadowBlur = 10;
+        ctx.shadowColor = `rgba(${color},1)`; ctx.shadowBlur = 12;
         ctx.stroke(); ctx.shadowBlur = 0;
     });
 }

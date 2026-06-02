@@ -103,11 +103,17 @@ body {
 /* ══════════════ LEFT PANEL ══════════════ */
 #ui-panel {
     width: 50vw; height: 100vh;
-    background: linear-gradient(160deg, #000e1a 0%, var(--bg2) 100%);
+    /* 右端をフェードアウトしてアバター側とシームレスに繋げる */
+    background: linear-gradient(to right,
+        rgba(0,6,14,0.92) 0%,
+        rgba(0,6,14,0.85) 60%,
+        rgba(0,4,10,0.35) 90%,
+        transparent      100%
+    );
     display: flex; flex-direction: column;
     position: relative; z-index: 100;
-    border-right: 1px solid rgba(var(--ec-rgb),0.12);
-    transition: background var(--spd), border-color var(--spd);
+    border-right: none;    /* 境界線を削除 */
+    transition: background var(--spd);
     overflow: hidden;
 }
 
@@ -371,8 +377,7 @@ body {
 #canvas-container {
     width: 50vw; height: 100vh;
     position: relative;
-    /* フィルター(brightness 0.7)後でも視認できるよう少し明るく */
-    background: radial-gradient(ellipse at 50% 80%, #003040 0%, #001828 50%, #000c14 100%);
+    background: radial-gradient(ellipse at 48% 55%, #002a3e 0%, #001522 45%, #000a14 100%);
     overflow: hidden;
     transition: background var(--spd);
 }
