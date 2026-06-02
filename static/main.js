@@ -208,10 +208,9 @@ function toggleVoice() {
 function toggleCamera() {
     cameraHidden = !cameraHidden;
     setToggleState('toggle-camera', !cameraHidden);
-    // プレビューは設定画面内のみ表示（カメラOFF時はno-signalを表示）
-    const preview  = document.getElementById('camera-preview');
+    const cvs      = document.getElementById('camera-preview-canvas');
     const noSignal = document.getElementById('camera-no-signal');
-    if (preview)  preview.style.display  = cameraHidden ? 'none'  : 'block';
+    if (cvs)      cvs.style.display      = cameraHidden ? 'none'  : 'block';
     if (noSignal) noSignal.style.display = cameraHidden ? 'block' : 'none';
 }
 
@@ -276,10 +275,18 @@ function connectWebSocket() {
         }
 
         if (msg.type === 'camera_preview') {
-            // カメラプレビューは設定画面内の img のみ更新（メイン画面には表示しない）
-            const previewImg = document.querySelector('#camera-preview-section #camera-preview');
-            if (previewImg && !cameraHidden) {
-                previewImg.src = 'data:image/jpeg;base64,' + msg.image;
+            // <img>不使用。canvas に直接描画してブロークンアイコンを根絶
+            if (!cameraHidden) {
+                const cvs = document.getElementById('camera-preview-canvas');
+                if (cvs) {
+                    const img = new Image();
+                    img.onload = () => {
+                        cvs.width  = img.width;
+                        cvs.height = img.height;
+                        cvs.getContext('2d').drawImage(img, 0, 0);
+                    };
+                    img.src = 'data:image/jpeg;base64,' + msg.image;
+                }
             }
             return;
         }
@@ -1058,8 +1065,9 @@ window.addEventListener('DOMContentLoaded', () => {
     updateCSSFilters();
     startSysClock();
     setSysNet(false);
-    // JARVISリングをシステム起動前から常時描画
-    initParticleSystem(); // 初期はオフライン表示
+    // layout 計算完了後に particle/JARVIS 描画を開始
+    // (DOMContentLoaded 直後は clientWidth=0 になる場合があるため遅延)
+    setTimeout(initParticleSystem, 300); // 初期はオフライン表示
 
     // WS接続後にオンライン表示
     const _check = setInterval(() => {
