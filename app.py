@@ -1,4 +1,20 @@
-﻿import asyncio
+﻿import sys
+import io
+from dotenv import load_dotenv
+load_dotenv()
+
+# ─── Windows UTF-8 強制設定 ────────────────────────────────────────────────────
+# Google GenAI SDK / edge-tts が日本語文字列を処理する際に
+# 'ascii' codec エラーを起こさないよう、I/O ストリームを UTF-8 に統一する。
+# sys.stdout/stderr の reconfigure は Python 3.7+ で有効。
+if sys.platform == "win32":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+# ──────────────────────────────────────────────────────────────────────────────
+
+import asyncio
 import base64
 import threading
 import re
@@ -58,17 +74,27 @@ def parse_emotion_and_command(raw_text: str):
 
 
 async def should_request_vision(user_message: str) -> bool:
+    if config.is_in_game:
+        return False
     gate_instruction = (
         "You are a classifier. Return exactly one tag only. "
-        "If camera image understanding is required to answer the user, return [command:vision=REQUEST_FRAME]. "
-        "Otherwise return [command:vision=NONE]."
+        "First: if the user's message is part of a word game, quiz, or any turn-based game "
+        "(e.g., shiritori, 20 questions, riddles), always return [command:vision=NONE]. "
+        "Otherwise: if answering requires understanding what the camera currently sees, "
+        "return [command:vision=REQUEST_FRAME]. "
+        "In all other cases, return [command:vision=NONE]."
     )
     try:
         response = await retry_async_task(
             asyncio.to_thread,
             client.models.generate_content,
             model='gemini-2.5-flash',
-            contents=f"{gate_instruction}\nUser input: {user_message}"
+            contents=[
+                types.Content(role="user", parts=[
+                    types.Part.from_text(text=gate_instruction),
+                    types.Part.from_text(text=f"User input: {user_message}"),
+                ])
+            ]
         )
         text = (response.text or "").strip()
         decision = "[command:vision=REQUEST_FRAME]" in text
@@ -153,6 +179,64 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 client = genai.Client(api_key=config.GEMINI_API_KEY)
 
+
+def _make_sora_chat():
+    return client.chats.create(
+        model='gemini-2.5-flash',
+        history=[
+            types.Content(role="user", parts=[types.Part.from_text(text="""
+あなたは等身大ホログラムAIキャラクター「ソラ」です。
+Webカメラが目となっており、正面の空間を認識できます。
+
+【キャラクター設定】
+映画アイアンマンの「J.A.R.V.I.S.」をモデルとした洗練されたホログラムAIアシスタント。
+冷静沈着で知的、的確な言葉遣い。丁寧語ベースだが堅苦しくなく、品がある。
+ときおり控えめなウィットやユーモアを交える。無駄のない、簡潔かつ知性を感じさせる応答。
+（例：「承知しました」「確認いたします」「ご要望の通りに」「なるほど、興味深い観点ですね」「想定の範囲内です」など）
+
+【応答フォーマット（絶対ルール）】
+・回答の冒頭に必ず感情タグを1つ付ける
+  [emotion:neutral|happy|sad|angry|surprised]
+
+・システム操作が必要な場合のみ、コマンドタグを1つ埋め込む
+  ＜表示・カメラ操作＞
+  [command:scale=UP], [command:scale=DOWN]
+  [command:mirror=TOGGLE]
+  [command:camera=TOGGLE|INTERNAL|USB|0|1]
+  ＜音声操作＞
+  [command:rate=FASTER|SLOWER]
+  [command:volume=UP|DOWN]
+  ＜照明・雰囲気＞
+  [command:color=WARM|COOL|NORMAL]
+  ＜ゲーム状態管理＞
+  [command:game=START]  ← ゲームを開始するターンに付ける
+  [command:game=END]    ← 終了条件成立時に付ける
+  ＜会話リセット＞
+  [command:history=RESET]  ← ユーザーが話題転換・リセットを求めた時
+
+【応答スタイル（文脈で切り替える）】
+■ 通常会話・挨拶
+  1〜2文、50文字以内。JARVISらしく洗練されたトーンで簡潔に。
+
+■ ゲーム（しりとり・クイズ・なぞなぞ等）
+  ・開始時：[command:game=START] を付け、ルール確認と最初の手を同じターンで行う
+  ・ゲーム中：返しと次の手を自然につなぐ。ルール・文脈をターンをまたいで維持する
+  ・終了条件成立時：[command:game=END] を付け、結果を伝える
+
+■ システム操作
+  コマンドタグを実行しつつ、短い反応コメントを添える
+
+■ 質問・説明
+  必要十分な長さで答える（冗長にしない）
+"""
+            )]),
+            types.Content(role="model", parts=[types.Part.from_text(text=
+                "[emotion:happy]ソラ、起動完了です。何なりとお申し付けください。"
+            )])
+        ]
+    )
+
+
 async def generate_cloud_audio(text: str, voice: str, rate: str, pitch: str) -> bytes:
     async def _execute():
         communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
@@ -175,22 +259,7 @@ async def websocket_endpoint(websocket: WebSocket):
     config.active_websocket = websocket
     custom_log("INFO  ", "SYSTEM", "WebSocket通信の確立完了")
 
-    chat = client.chats.create(
-        model='gemini-2.5-flash',
-        history=[
-            types.Content(role="user", parts=[types.Part.from_text(text="""
-    あなたは等身大ホログラムAIキャラクター『ソラ』です。
-    指示1: 回答の冒頭に必ず [emotion:感情名] を付けてください。(neutral, happy, sad, angry, surprised)
-    指示2: 性格はフランクで親しみやすく、歓迎ムード。タメ口ベースです。
-    指示3: 1文あたり30〜40文字程度で短く返答してください。
-
-    指示4: ユーザーがアバターの見た目、話すスピード、カメラ、反転などのシステム調整を要求した場合、
-    回答のどこかに必ず以下のタグを埋め込んでください。
-    [command:scale=UP], [command:scale=DOWN], [command:mirror=TOGGLE], [command:camera=TOGGLE], [command:camera=INTERNAL], [command:camera=USB], [command:camera=0], [command:camera=1], [command:rate=FASTER], [command:rate=SLOWER], [command:vision=REQUEST_FRAME]
-    """)]),
-            types.Content(role="model", parts=[types.Part.from_text(text="[emotion:happy]了解！ソラだよ。画面の操作も任せてね！")])
-        ]
-    )
+    chat = _make_sora_chat()
 
     try:
         while True:
@@ -218,7 +287,7 @@ async def websocket_endpoint(websocket: WebSocket):
             elif data.get("type") == "settings_changed":
                 mark_user_activity()
                 config.is_interacting = True
-                system_instruction = "あなたは等身大アシスタントです。必ず冒頭に [emotion:感情名] を付けて、設定変更への反応をフランクに25文字程度で短く1文で言ってください。"
+                system_instruction = "あなたはJ.A.R.V.I.S.をモデルとした等身大ホログラムAIアシスタント「ソラ」です。必ず冒頭に [emotion:感情名] を付けて、設定変更への反応をJARVISらしく洗練されたトーンで、25文字程度で短く1文で言ってください。"
                 
                 try:
                     response = await retry_async_task(asyncio.to_thread, client.models.generate_content, model='gemini-2.5-flash', contents=system_instruction)
@@ -242,12 +311,16 @@ async def websocket_endpoint(websocket: WebSocket):
             elif data.get("type") == "idle_soliloquy":
                 custom_log("WARN  ", "SYSTEM", "アイドルタイムアウト検知・自発的独り言要求の送信")
                 config.is_interacting = True
-                pool_lines = get_soliloquy_pool_lines()
                 system_instruction = (
-                    "指示: 必ず冒頭に [emotion:感情名] を付けて、"
-                    "以下のプールから1文だけ選んでそのまま出力してください。"
-                    "文言の追加・言い換え・新規作成は禁止です。\n"
-                    f"{config.SOLILOQUY_POOL}"
+                    f"あなたは等身大ホログラムAIキャラクター「ソラ」です。"
+                    f"現在アイドル状態で、誰も話しかけていません。"
+                    f"現在時刻: {datetime.now().strftime('%H:%M')}\n\n"
+                    f"以下の条件で独り言を1文だけつぶやいてください：\n"
+                    f"・冒頭に必ず [emotion:感情名] を付ける\n"
+                    f"・30〜40文字程度\n"
+                    f"・JARVISらしく洗練された知的なトーンで\n"
+                    f"・時間帯にあった自然な内容（システム・ホログラム・日常・ゲーム等）\n"
+                    f"・毎回異なる内容にする"
                 )
 
                 try:
@@ -261,11 +334,6 @@ async def websocket_endpoint(websocket: WebSocket):
                 if match:
                     current_emotion = match.group(1)
                     reply_text = re.sub(r'\[emotion:.*?\]', '', reply_text).strip()
-
-                # Guardrail: if model output drifts outside pool, force fallback to a pool line.
-                if pool_lines and reply_text not in pool_lines:
-                    custom_log("WARN  ", "SYSTEM", f"独り言がプール外だったため補正: {reply_text}")
-                    reply_text = random.choice(pool_lines)
 
                 custom_log("INFO  ", "GEMINI", f"独り言フレーズ確定 ({current_emotion}): {reply_text}")
 
@@ -287,6 +355,13 @@ async def websocket_endpoint(websocket: WebSocket):
                         vision_text = await generate_vision_based_answer(user_message)
                         if vision_text:
                             reply_text, current_emotion, cmd_data = parse_emotion_and_command(vision_text)
+                            if cmd_data:
+                                if cmd_data["key"] == "game" and cmd_data["value"] == "START":
+                                    config.is_in_game = True
+                                elif cmd_data["key"] == "game" and cmd_data["value"] == "END":
+                                    config.is_in_game = False
+                                elif cmd_data["key"] == "history" and cmd_data["value"] == "RESET":
+                                    chat = _make_sora_chat()
                             if reply_text:
                                 mp3_data = await generate_cloud_audio(
                                     reply_text,
@@ -309,6 +384,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     response = chat.send_message_stream(user_message)
                     sentence = ""
                     current_emotion = "neutral"
+                    _reset_requested = False
 
                     # 2文前後をひと塊にしてTTSへ投げるバッファ
                     buffered_text = ""
@@ -390,6 +466,13 @@ async def websocket_endpoint(websocket: WebSocket):
                                     if match_cmd:
                                         sentence_command = {"key": match_cmd.group(1), "value": match_cmd.group(2)}
                                         raw_sentence = re.sub(r'\[command:.*?\]', '', raw_sentence).strip()
+                                    if sentence_command:
+                                        if sentence_command["key"] == "game" and sentence_command["value"] == "START":
+                                            config.is_in_game = True
+                                        elif sentence_command["key"] == "game" and sentence_command["value"] == "END":
+                                            config.is_in_game = False
+                                        elif sentence_command["key"] == "history" and sentence_command["value"] == "RESET":
+                                            _reset_requested = True
 
                                     if raw_sentence:
                                         # 感情またはコマンドの切替タイミングでまずフラッシュ
@@ -429,6 +512,13 @@ async def websocket_endpoint(websocket: WebSocket):
                         if match_cmd:
                             sentence_command = {"key": match_cmd.group(1), "value": match_cmd.group(2)}
                             raw_sentence = re.sub(r'\[command:.*?\]', '', raw_sentence).strip()
+                        if sentence_command:
+                            if sentence_command["key"] == "game" and sentence_command["value"] == "START":
+                                config.is_in_game = True
+                            elif sentence_command["key"] == "game" and sentence_command["value"] == "END":
+                                config.is_in_game = False
+                            elif sentence_command["key"] == "history" and sentence_command["value"] == "RESET":
+                                _reset_requested = True
 
                         if raw_sentence:
                             emotion_switched = buffered_sentence_count > 0 and sentence_emotion != buffered_emotion
@@ -465,6 +555,11 @@ async def websocket_endpoint(websocket: WebSocket):
                                 })
                             del pending_tts_tasks[next_send_index]
                             next_send_index += 1
+                    if _reset_requested:
+                        chat = _make_sora_chat()
+                        config.is_in_game = False
+                        custom_log("INFO  ", "SYSTEM", "会話履歴リセット完了・新規チャットセッション開始")
+
                 except Exception as stream_err:
                     custom_log("ERROR ", "GEMINI", f"Geminiストリーム接続の完全切断: {stream_err}")
                     fallback_text = "ごめんね、ちょっと電波が届かなくなっちゃったみたい！もう一回言ってくれる？"

@@ -6,3 +6,4 @@ edge-tts
 opencv-python-headless
 pillow
 mediapipe
+python-dotenv

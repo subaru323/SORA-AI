@@ -54,11 +54,26 @@ renderer.setSize(width, height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 container.appendChild(renderer.domElement);
 
-const ambientLight = new THREE.AmbientLight(0xffeedd, 1.0); 
+const ambientLight = new THREE.AmbientLight(0xffeedd, 1.0);
 scene.add(ambientLight);
-const directionalLight = new THREE.DirectionalLight(0xfffbea, 1.0); 
+const directionalLight = new THREE.DirectionalLight(0xfffbea, 1.0);
 directionalLight.position.set(1.0, 1.0, 1.0).normalize();
 scene.add(directionalLight);
+
+// 感情連動ポイントライト（アバター前方）
+const emotionLight = new THREE.PointLight(0x00ffcc, 0.0, 4.0);
+emotionLight.position.set(0.0, 1.2, 1.5);
+scene.add(emotionLight);
+
+const EMOTION_LIGHT_COLORS = {
+    neutral:   0x00ffcc,
+    happy:     0xffdd44,
+    sad:       0x4499ff,
+    angry:     0xff4433,
+    surprised: 0xffffff,
+};
+let targetLightIntensity = 0.0;
+let currentLightIntensity = 0.0;
 
 const EMOTION_POSES = {
     neutral:   { armLz: 1.3,  armLx: 0.1,  armRz: -1.3,  armRx: 0.1,  shoulderZ: 0.0,  headX: 0.0 },
@@ -75,7 +90,7 @@ window.playMotion = (emotion) => {
     if (EMOTION_POSES[emotion]) {
         targetPose = EMOTION_POSES[emotion];
         window.currentVrmEmotionName = emotion;
-        
+
         if (window.currentVrm && window.currentVrm.expressionManager) {
             const expressionNames = ['happy', 'sad', 'angry', 'surprised'];
             if (emotion === 'neutral') {
@@ -84,6 +99,11 @@ window.playMotion = (emotion) => {
                 window.currentVrm.expressionManager.setValue(emotion, 1.0);
             }
         }
+
+        // 感情連動ライト色の更新
+        const col = EMOTION_LIGHT_COLORS[emotion] ?? EMOTION_LIGHT_COLORS.neutral;
+        emotionLight.color.setHex(col);
+        targetLightIntensity = emotion === 'neutral' ? 0.0 : 0.55;
     }
 };
 
@@ -221,6 +241,10 @@ function animate() {
         } else if (expressionManager) {
             ['aa', 'ih', 'uu', 'ee', 'oo'].forEach(v => expressionManager.setValue(v, 0));
         }
+
+        // 感情ライト強度を滑らかに補間
+        currentLightIntensity += (targetLightIntensity - currentLightIntensity) * 0.05;
+        emotionLight.intensity = currentLightIntensity;
 
         vrm.update(deltaTime);
     }

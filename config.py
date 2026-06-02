@@ -13,6 +13,7 @@ current_camera_id = 0
 main_loop = None
 camera_thread_started = False
 is_interacting = False  # 能動的な対話（ユーザー発話、AI応答・再生）が動いている間は True
+is_in_game = False      # しりとり・クイズ等のターン制ゲーム中は True（Vision判定スキップに使用）
 last_user_activity_time = 0
 latest_camera_frame_b64 = None
 latest_camera_frame_ts = 0

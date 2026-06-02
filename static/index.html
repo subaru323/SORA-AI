@@ -4,138 +4,193 @@
     <meta charset="UTF-8">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pepper's Ghost Avatar</title>
+    <title>SORA // NEXUS</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+    <!-- マイク録音インジケーター（最前面赤バー） -->
     <div id="mic-indicator"></div>
 
+    <!-- ゲーム中バッジ（浮遊） -->
+    <div id="game-badge">🎮 GAME ON</div>
+
+    <!-- 感情フラッシュオーバーレイ -->
+    <div id="emotion-flash"></div>
+
+    <!-- ══════════════ LEFT PANEL : UI ══════════════ -->
     <div id="ui-panel">
-        <img id="camera-preview" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="Camera Preview" style="display: none;">
-        <button id="start-btn">システム起動（またはスペースキー）</button>
+
+        <!-- ステータスバー -->
+        <div id="status-bar">
+            <div id="sb-left">
+                <span id="sb-dot">●</span>
+                <span id="sb-title">SORA // NEXUS</span>
+            </div>
+            <div id="sb-center">
+                <span id="sb-emotion">◈ neutral</span>
+            </div>
+            <div id="sb-right">
+                <span id="sb-mode">STANDBY</span>
+                <button id="config-btn" title="Quick Config">⚙</button>
+            </div>
+        </div>
+
+        <!-- クイック設定パネル -->
+        <div id="quick-config-panel">
+            <div class="qc-title">// SYSTEM CONFIG</div>
+            <div class="qc-row">
+                <span class="qc-label">MIRROR</span>
+                <div class="qc-toggle active" id="toggle-mirror" data-target="mirror">
+                    <span class="qc-state">ACTIVE</span>
+                    <div class="qc-knob"></div>
+                </div>
+            </div>
+            <div class="qc-row">
+                <span class="qc-label">VOICE</span>
+                <div class="qc-toggle active" id="toggle-voice" data-target="voice">
+                    <span class="qc-state">ACTIVE</span>
+                    <div class="qc-knob"></div>
+                </div>
+            </div>
+            <div class="qc-row">
+                <span class="qc-label">CAMERA</span>
+                <div class="qc-toggle active" id="toggle-camera" data-target="camera">
+                    <span class="qc-state">ACTIVE</span>
+                    <div class="qc-knob"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- カメラプレビューはオプション画面に移動 -->
+
+        <!-- チャットログ -->
         <div id="chat-log">
             <div class="msg-status" id="system-status">アバターモデルを読み込んでいます...</div>
         </div>
+
+        <!-- テキスト入力エリア（JS が追記） -->
+        <div id="text-input-area"></div>
+
+        <!-- 起動ボタン -->
+        <button id="start-btn">▶ &nbsp;SYSTEM BOOT</button>
+
     </div>
 
-    <div id="canvas-container" class="avatar-filter-target"></div>
+    <!-- ══════════════ RIGHT PANEL : AVATAR ══════════════ -->
+    <div id="canvas-container" class="avatar-filter-target">
+        <div id="hex-bg"></div>
+        <div id="emotion-aura"></div>
+        <div id="scan-grid"></div>
+        <div id="scan-line"></div>
+        <canvas id="particle-canvas"></canvas>
+    </div>
 
+    <!-- ══════════════ OPTIONS OVERLAY ══════════════ -->
     <div id="options-overlay">
-        <h2 style="margin-top:0; color:#00ffcc; text-align:center; font-size:28px;">SYSTEM OPTIONS</h2>
-        <div class="options-grid">
-            
-            <div class="options-section">
-                <h3>Visual & Fitting</h3>
-                
-                <div class="control-group" style="margin-bottom: 12px;">
-                    <label style="color:#00ffcc; font-weight: bold; font-size: 15px;">📷 カメラデバイス選択</label>
-                    <select id="param-camera">
-                        <option value="0" selected>カメラ 0 (標準 / 内蔵カメラ)</option>
-                        <option value="1">カメラ 1 (外付けUSBカメラ等)</option>
-                        <option value="2">カメラ 2 (予備デバイス)</option>
-                    </select>
-                </div>
-
-                <div class="control-group" style="margin-bottom: 25px; border-bottom: 1px solid rgba(0,255,204,0.15); padding-bottom: 15pxVar;">
-                    <label style="color:#00ffcc; font-weight: bold; font-size: 16px;">画面左右反転モード</label>
-                    <select id="param-mirror">
-                        <option value="true" selected>反転 ON </option>
-                        <option value="false">反転 OFF </option>
-                    </select>
-                </div>
-                
-                <div class="control-group">
-                    <label>明るさ (Brightness)</label>
-                    <div class="control-row">
-                        <input type="range" id="param-bright" min="0.3" max="1.5" step="0.05" value="0.7">
-                        <item-val id="val-bright">0.7</item-val>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label>コントラスト (Contrast)</label>
-                    <div class="control-row">
-                        <input type="range" id="param-contrast" min="0.5" max="2.5" step="0.05" value="1.5">
-                        <item-val id="val-contrast">1.5</item-val>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label>彩度 (Saturate)</label>
-                    <div class="control-row">
-                        <input type="range" id="param-saturate" min="0.5" max="4.0" step="0.1" value="3.0">
-                        <item-val id="val-saturate">3.0</item-val>
-                    </div>
-                </div>
-
-                <div class="control-group" style="margin-top: 25px;">
-                    <label>実機位置調整 (X Axis)</label>
-                    <div class="control-row">
-                        <input type="range" id="param-vrm-x" min="-1.0" max="1.0" step="0.02" value="0.0">
-                        <item-val id="val-vrm-x">0.00</item-val>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label>実機位置調整 (Y Axis)</label>
-                    <div class="control-row">
-                        <input type="range" id="param-vrm-y" min="-1.0" max="1.0" step="0.02" value="-0.15">
-                        <item-val id="val-vrm-y">-0.15</item-val>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label>アバター全高スケール (Scale)</label>
-                    <div class="control-row">
-                        <input type="range" id="param-vrm-scale" min="0.5" max="2.0" step="0.02" value="1.18">
-                        <item-val id="val-vrm-scale">1.18</item-val>
-                    </div>
-                </div>
-            </div>
-
-            <div class="options-section">
-                <h3>Voice Synthesis (edge-tts)</h3>
-                
-                <div class="control-group">
-                    <label>話速 (Rate)</label>
-                    <div class="control-row">
-                        <input type="range" id="param-rate" min="0" max="100" step="5" value="50">
-                        <item-val id="val-rate">+50%</item-val>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label>ピッチ (Pitch)</label>
-                    <div class="control-row">
-                        <input type="range" id="param-pitch" min="0" max="50" step="5" value="30">
-                        <item-val id="val-pitch">+30Hz</item-val>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label>キャラクター声色 (Voice)</label>
-                    <select id="param-voice">
-                        <option value="ja-JP-NanamiNeural" selected>Nanami (女性・標準)</option>
-                        <option value="ja-JP-KeitaNeural">Keita (男性・標準)</option>
-                        <option value="ja-JP-AoiNeural">Aoi (女性・自然)</option>
-                        <option value="ja-JP-DaichiNeural">Daichi (男性・自然)</option>
-                    </select>
-                </div>
-                
-                <div style="margin-top:40px; text-align:center; color:#666; font-size:14px; line-height:1.6;">
-                    【操作ヘルプ】<br>
-                    ビジュアル・配置項目はリアルタイムに変形します。<br>
-                    音声項目は、変更後に話しかけた文から適用されます。
-                </div>
-            </div>
+        <div id="options-header">
+            <h2>// SYSTEM OPTIONS</h2>
+            <span id="options-hint">[ ESC ] to close</span>
         </div>
-        <div class="esc-hint">【Esc】キーを押すと、設定を閉じて対話に戻ります</div>
+
+        <!-- カメラプレビュー（設定画面のみ表示） -->
+        <div id="camera-preview-section">
+            <div class="qc-title" style="margin-bottom:10px;">// CAMERA FEED</div>
+            <img id="camera-preview"
+                 src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+                 alt="Camera Feed">
+            <div id="camera-no-signal">— NO SIGNAL —</div>
+        </div>
+
+        <div class="options-grid">
+
+            <div class="options-section">
+                <h3>▸ Visual &amp; Camera</h3>
+
+                <div class="ctrl-group">
+                    <label>📷 カメラデバイス</label>
+                    <select id="param-camera">
+                        <option value="0" selected>Camera 0 (Internal)</option>
+                        <option value="1">Camera 1 (USB)</option>
+                        <option value="2">Camera 2</option>
+                    </select>
+                </div>
+
+                <div class="ctrl-group">
+                    <label>左右反転モード</label>
+                    <select id="param-mirror">
+                        <option value="true" selected>反転 ON</option>
+                        <option value="false">反転 OFF</option>
+                    </select>
+                </div>
+
+                <div class="ctrl-group">
+                    <label>Brightness <span class="vbadge" id="val-bright">0.7</span></label>
+                    <input type="range" id="param-bright" min="0.3" max="1.5" step="0.05" value="0.7">
+                </div>
+                <div class="ctrl-group">
+                    <label>Contrast <span class="vbadge" id="val-contrast">1.5</span></label>
+                    <input type="range" id="param-contrast" min="0.5" max="2.5" step="0.05" value="1.5">
+                </div>
+                <div class="ctrl-group">
+                    <label>Saturate <span class="vbadge" id="val-saturate">3.0</span></label>
+                    <input type="range" id="param-saturate" min="0.5" max="4.0" step="0.1" value="3.0">
+                </div>
+
+                <div class="ctrl-group" style="margin-top:20px">
+                    <label>Position X <span class="vbadge" id="val-vrm-x">0.00</span></label>
+                    <input type="range" id="param-vrm-x" min="-1.0" max="1.0" step="0.02" value="0.0">
+                </div>
+                <div class="ctrl-group">
+                    <label>Position Y <span class="vbadge" id="val-vrm-y">-0.15</span></label>
+                    <input type="range" id="param-vrm-y" min="-1.0" max="1.0" step="0.02" value="-0.15">
+                </div>
+                <div class="ctrl-group">
+                    <label>Scale <span class="vbadge" id="val-vrm-scale">1.18</span></label>
+                    <input type="range" id="param-vrm-scale" min="0.5" max="2.0" step="0.02" value="1.18">
+                </div>
+            </div>
+
+            <div class="options-section">
+                <h3>▸ Voice Synthesis</h3>
+
+                <div class="ctrl-group">
+                    <label>Rate <span class="vbadge" id="val-rate">+50%</span></label>
+                    <input type="range" id="param-rate" min="0" max="100" step="5" value="50">
+                </div>
+                <div class="ctrl-group">
+                    <label>Pitch <span class="vbadge" id="val-pitch">+30Hz</span></label>
+                    <input type="range" id="param-pitch" min="0" max="50" step="5" value="30">
+                </div>
+                <div class="ctrl-group">
+                    <label>Voice</label>
+                    <select id="param-voice">
+                        <option value="ja-JP-NanamiNeural" selected>Nanami（女性・標準）</option>
+                        <option value="ja-JP-KeitaNeural">Keita（男性・標準）</option>
+                        <option value="ja-JP-AoiNeural">Aoi（女性・自然）</option>
+                        <option value="ja-JP-DaichiNeural">Daichi（男性・自然）</option>
+                    </select>
+                </div>
+
+                <div style="margin-top:32px; color:rgba(255,255,255,0.25); font-size:13px; font-family:monospace; line-height:1.8;">
+                    // Visual items apply in real-time.<br>
+                    // Voice items apply from next utterance.
+                </div>
+            </div>
+
+        </div>
     </div>
 
     <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.154.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.154.0/examples/jsm/",
-                "@pixiv/three-vrm": "https://unpkg.com/@pixiv/three-vrm@2.0.0/lib/three-vrm.module.js"
-            }
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.154.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.154.0/examples/jsm/",
+            "@pixiv/three-vrm": "https://unpkg.com/@pixiv/three-vrm@2.0.0/lib/three-vrm.module.js"
         }
+    }
     </script>
-    
+
     <script type="module" src="avatar.js"></script>
     <script type="module" src="main.js"></script>
 </body>
