@@ -54,6 +54,13 @@ renderer.setSize(width, height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 container.appendChild(renderer.domElement);
 
+// JARVIS リング装飾がキャンバスの上に表示されるよう z-index を設定
+Object.assign(renderer.domElement.style, {
+    position: 'absolute',
+    top: '0', left: '0',
+    zIndex: '4',
+});
+
 const ambientLight = new THREE.AmbientLight(0xffeedd, 1.0);
 scene.add(ambientLight);
 const directionalLight = new THREE.DirectionalLight(0xfffbea, 1.0);

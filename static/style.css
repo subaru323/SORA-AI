@@ -375,7 +375,11 @@ body {
     overflow: hidden;
     transition: background var(--spd);
 }
-canvas { width: 100% !important; height: 100% !important; }
+/* THREE.js が追加するキャンバスを z-index 4 に固定（avatar.js 側でも設定） */
+canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
 .avatar-filter-target { filter: brightness(0.7) contrast(1.5) saturate(3.0); }
 
 /* Hex Grid */
@@ -416,73 +420,77 @@ canvas { width: 100% !important; height: 100% !important; }
 @keyframes scan-down { 0%{top:-120px;} 100%{top:100%;} }
 
 /* ── JARVIS Ring Decorations ─────────────────────────────────── */
+/*
+   vh ベースのサイズで高さに合わせたリング。
+   THREE.js キャンバスは avatar.js で z-index:4 に設定するため
+   z-index:10 以上にすることで確実にキャンバス上に描画される。
+*/
 #av-ring-outer {
-    position: absolute; z-index: 5;
+    position: absolute; z-index: 10;
     top: 50%; left: 50%;
-    width: 88%; padding-bottom: 88%;
+    width: 86vh; height: 86vh;
     transform: translate(-50%, -50%);
     border-radius: 50%;
-    border: 1px solid rgba(var(--ec-rgb),0.2);
-    box-shadow: 0 0 30px rgba(var(--ec-rgb),0.05), inset 0 0 30px rgba(var(--ec-rgb),0.03);
+    border: 1px solid rgba(var(--ec-rgb),0.35);
+    box-shadow: 0 0 20px rgba(var(--ec-rgb),0.06), inset 0 0 20px rgba(var(--ec-rgb),0.04);
     pointer-events: none;
     animation: ring-rotate-slow 30s linear infinite;
     transition: border-color var(--spd);
 }
 #av-ring-outer::before {
     content: '';
-    position: absolute; inset: -4px;
+    position: absolute; inset: -5px;
     border-radius: 50%;
-    border: 1px dashed rgba(var(--ec-rgb),0.1);
+    border: 1px dashed rgba(var(--ec-rgb),0.15);
 }
 #av-ring-outer::after {
     content: '';
     position: absolute;
-    top: -3px; left: 20%;
-    width: 10px; height: 5px;
+    top: -4px; left: 20%;
+    width: 12px; height: 6px;
     background: var(--ec);
-    border-radius: 2px;
-    box-shadow: 0 0 8px rgba(var(--ec-rgb),0.8);
+    border-radius: 3px;
+    box-shadow: 0 0 10px rgba(var(--ec-rgb),1);
     transition: background var(--spd);
 }
 
 #av-ring-mid {
-    position: absolute; z-index: 5;
+    position: absolute; z-index: 10;
     top: 50%; left: 50%;
-    width: 68%; padding-bottom: 68%;
+    width: 64vh; height: 64vh;
     transform: translate(-50%, -50%);
     border-radius: 50%;
-    border: 1px solid rgba(var(--ec-rgb),0.15);
+    border: 1px solid rgba(var(--ec-rgb),0.25);
     pointer-events: none;
-    animation: ring-rotate-rev 20s linear infinite;
+    animation: ring-rotate-rev 18s linear infinite;
     transition: border-color var(--spd);
 }
 #av-ring-mid::after {
     content: '';
     position: absolute;
-    top: -2px; right: 15%;
-    width: 6px; height: 4px;
-    background: var(--ec);
-    border-radius: 1px;
-    opacity: 0.7;
-    box-shadow: 0 0 5px rgba(var(--ec-rgb),0.8);
+    top: -3px; right: 15%;
+    width: 8px; height: 4px;
+    background: var(--ec); border-radius: 2px;
+    box-shadow: 0 0 6px rgba(var(--ec-rgb),0.9);
+    opacity: 0.8;
 }
 
 #av-ring-inner {
-    position: absolute; z-index: 5;
+    position: absolute; z-index: 10;
     top: 50%; left: 50%;
-    width: 40%; padding-bottom: 40%;
+    width: 38vh; height: 38vh;
     transform: translate(-50%, -50%);
     border-radius: 50%;
-    border: 1px solid rgba(var(--ec-rgb),0.25);
+    border: 1px solid rgba(var(--ec-rgb),0.4);
     pointer-events: none;
-    box-shadow: 0 0 15px rgba(var(--ec-rgb),0.08), inset 0 0 15px rgba(var(--ec-rgb),0.04);
+    box-shadow: 0 0 12px rgba(var(--ec-rgb),0.1), inset 0 0 12px rgba(var(--ec-rgb),0.06);
     transition: border-color var(--spd), box-shadow var(--spd);
 }
 #av-ring-inner::after {
     content: '';
-    position: absolute; inset: 6px;
+    position: absolute; inset: 8px;
     border-radius: 50%;
-    border: 1px solid rgba(var(--ec-rgb),0.1);
+    border: 1px solid rgba(var(--ec-rgb),0.15);
 }
 
 @keyframes ring-rotate-slow { to { transform: translate(-50%,-50%) rotate(360deg); } }
@@ -490,9 +498,9 @@ canvas { width: 100% !important; height: 100% !important; }
 
 /* ── Tick Mark SVG ───────────────────────────────────────────── */
 #av-tick-svg {
-    position: absolute; z-index: 5;
+    position: absolute; z-index: 10;
     top: 50%; left: 50%;
-    width: 88%; height: 88%;
+    width: 86vh; height: 86vh;
     transform: translate(-50%, -50%);
     pointer-events: none;
     overflow: visible;
@@ -500,35 +508,25 @@ canvas { width: 100% !important; height: 100% !important; }
 
 /* ── Crosshair ───────────────────────────────────────────────── */
 #av-cross-h, #av-cross-v {
-    position: absolute; z-index: 5; pointer-events: none;
-    background: linear-gradient(90deg, transparent, rgba(var(--ec-rgb),0.25) 30%, rgba(var(--ec-rgb),0.25) 70%, transparent);
+    position: absolute; z-index: 10; pointer-events: none;
     transition: background var(--spd);
 }
 #av-cross-h {
     top: 50%; left: 0; right: 0; height: 1px;
     transform: translateY(-50%);
+    background: linear-gradient(90deg, transparent 0%, rgba(var(--ec-rgb),0.3) 20%, rgba(var(--ec-rgb),0.5) 48%, rgba(var(--ec-rgb),0.5) 52%, rgba(var(--ec-rgb),0.3) 80%, transparent 100%);
 }
 #av-cross-v {
     left: 50%; top: 0; bottom: 0; width: 1px;
     transform: translateX(-50%);
-    background: linear-gradient(180deg, transparent, rgba(var(--ec-rgb),0.25) 30%, rgba(var(--ec-rgb),0.25) 70%, transparent);
-}
-#av-cross-h::before, #av-cross-v::before {
-    content: '';
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--ec);
-    box-shadow: 0 0 8px rgba(var(--ec-rgb),0.8);
+    background: linear-gradient(180deg, transparent 0%, rgba(var(--ec-rgb),0.3) 20%, rgba(var(--ec-rgb),0.5) 48%, rgba(var(--ec-rgb),0.5) 52%, rgba(var(--ec-rgb),0.3) 80%, transparent 100%);
 }
 
 /* ── Pulse Rings (発話時) ────────────────────────────────────── */
 .av-pulse {
-    position: absolute; z-index: 4;
+    position: absolute; z-index: 9;
     top: 50%; left: 50%;
-    width: 40%; padding-bottom: 40%;
+    width: 38vh; height: 38vh;
     transform: translate(-50%, -50%);
     border-radius: 50%;
     border: 1px solid var(--ec);
@@ -536,15 +534,11 @@ canvas { width: 100% !important; height: 100% !important; }
     pointer-events: none;
     transition: border-color var(--spd);
 }
-.av-pulse.speaking {
-    animation: pulse-expand 2s ease-out infinite;
-}
-#av-pulse-2.speaking {
-    animation: pulse-expand 2s ease-out 0.8s infinite;
-}
+.av-pulse.speaking      { animation: pulse-expand 2s ease-out infinite; }
+#av-pulse-2.speaking    { animation: pulse-expand 2s ease-out 0.9s infinite; }
 @keyframes pulse-expand {
-    0%   { opacity: 0.5; transform: translate(-50%,-50%) scale(1); }
-    100% { opacity: 0;   transform: translate(-50%,-50%) scale(2.2); }
+    0%   { opacity: 0.55; transform: translate(-50%,-50%) scale(1); }
+    100% { opacity: 0;    transform: translate(-50%,-50%) scale(2.4); }
 }
 
 /* ── Corner Arcs ─────────────────────────────────────────────── */
@@ -594,14 +588,14 @@ canvas { width: 100% !important; height: 100% !important; }
 #options-header h2 { color: var(--ec); font-size: 22px; letter-spacing: 0.1em; transition: color var(--spd); text-shadow: 0 0 15px rgba(var(--ec-rgb),0.5); }
 #options-hint { font-size: 11px; color: var(--text2); opacity: 0.6; }
 
-/* Camera Preview in Options */
+/* Camera Preview — オプション画面内のみ表示 */
 #camera-preview-section {
     margin-bottom: 22px; padding: 14px 16px;
     background: rgba(var(--ec-rgb),0.02);
     border: 1px solid rgba(var(--ec-rgb),0.1);
     border-radius: 6px; transition: border-color var(--spd);
 }
-#camera-preview {
+#camera-preview-section #camera-preview {
     display: block; width: 100%; max-width: 480px; height: auto;
     border: 1px solid rgba(var(--ec-rgb),0.35); border-radius: 4px;
     background: #050a10; margin-top: 8px;
