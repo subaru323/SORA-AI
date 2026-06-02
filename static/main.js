@@ -777,11 +777,12 @@ function animateParticles() {
         // 両パネル（メッセージ＋アバター）の画面全体中央
         const cx = W * 0.5;
         const cy = H * 0.52;
+        // 各リング半径を元の 40%（2/5）に縮小
         const D  = Math.min(W, H);
-        const rO = D * 0.46;   // 外リング（目盛り）
-        const rS = D * 0.40;   // セグメントリング
-        const rM = D * 0.32;   // 中間リング
-        const rI = D * 0.18;   // 内リング
+        const rO = D * 0.185;  // 外リング（目盛り）
+        const rS = D * 0.160;  // セグメントリング
+        const rM = D * 0.128;  // 中間リング
+        const rI = D * 0.072;  // 内リング
 
         const ec  = getComputedStyle(document.documentElement).getPropertyValue('--ec').trim() || '#00d4ff';
         const rgb = ec.startsWith('#')
@@ -800,7 +801,7 @@ function animateParticles() {
         jSegRing(particleCtx, cx, cy, rS, rgb, 5, 0.9, 6, -jAngle * 1.1);
 
         // ── 3. カーディナルマーカー（セグメントリングの外側）
-        jCardinal(particleCtx, cx, cy, rS + 14, rgb);
+        jCardinal(particleCtx, cx, cy, rS + 6, rgb);
 
         // ── 4. 中間リング（逆回転）
         particleCtx.save();
@@ -829,7 +830,7 @@ function animateParticles() {
         jCross(particleCtx, cx, cy, W, H, rgb);
 
         // ── 8. コーナーブラケット
-        jCorners(particleCtx, W, H, rgb, 44);
+        jCorners(particleCtx, W, H, rgb, 36);
 
         // ── 9. 発話パルス（同心円が外に広がる）
         if (window.isSpeaking) {
@@ -1099,7 +1100,7 @@ function jCross(ctx, cx, cy, W, H, color) {
     ctx.shadowColor = `rgba(${color},1)`; ctx.shadowBlur = 16;
     ctx.fill(); ctx.shadowBlur = 0;
     // 内十字（短い実線）
-    const cl = 30;
+    const cl = 14;
     [[cx-cl,cy,cx+cl,cy],[cx,cy-cl,cx,cy+cl]].forEach(([x0,y0,x1,y1]) => {
         ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1);
         ctx.strokeStyle = `rgba(${color},0.9)`;

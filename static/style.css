@@ -386,6 +386,7 @@ body {
 #canvas-container {
     width: 50vw; height: 100vh;
     position: relative;
+    z-index: 20;   /* particle-canvas(z:10)より上 → リングがアバターの後ろに */
     background: radial-gradient(ellipse at 48% 55%, #002a3e 0%, #001522 45%, #000a14 100%);
     overflow: hidden;
     transition: background var(--spd);
