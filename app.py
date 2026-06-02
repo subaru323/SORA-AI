@@ -389,7 +389,13 @@ async def websocket_endpoint(websocket: WebSocket):
                                     await websocket.send_json({"type": "end"})
                                     continue
 
-                    response = chat.send_message_stream(user_message)
+                    # send_message_stream は同期イテレータ。
+                    # async関数内でそのままイテレートするとイベントループをブロックし
+                    # WebSocket keepalive が止まって切断される。
+                    # asyncio.to_thread でスレッドプールに逃がしてから全チャンクを収集する。
+                    response = await asyncio.to_thread(
+                        lambda: list(chat.send_message_stream(user_message))
+                    )
                     sentence = ""
                     current_emotion = "neutral"
                     _reset_requested = False
@@ -570,7 +576,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 except Exception as stream_err:
                     custom_log("ERROR ", "GEMINI", f"Geminiストリーム接続の完全切断: {stream_err}")
-                    fallback_text = "ごめんね、ちょっと電波が届かなくなっちゃったみたい！もう一回言ってくれる？"
+                    fallback_text = "通信に一時的な障害が発生しました。もう一度お願いいたします。"
                     mp3_data = await generate_cloud_audio(fallback_text, config.system_settings["voice"], config.system_settings["rate"], config.system_settings["pitch"])
                     if mp3_data:
                         b64_audio = base64.b64encode(mp3_data).decode('utf-8')
