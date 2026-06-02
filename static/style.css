@@ -103,27 +103,32 @@ body {
 /* ══════════════ LEFT PANEL ══════════════ */
 #ui-panel {
     width: 50vw; height: 100vh;
-    /* 右端をフェードアウトしてアバター側とシームレスに繋げる */
+    /* ヘッダー2段（48+34px=82px）分の上部余白 */
+    padding-top: 82px;
+    /* 右端をフェードアウトしてシームレスに */
     background: linear-gradient(to right,
-        rgba(0,6,14,0.92) 0%,
-        rgba(0,6,14,0.85) 60%,
-        rgba(0,4,10,0.35) 90%,
-        transparent      100%
+        rgba(0,5,12,0.88) 0%,
+        rgba(0,5,12,0.80) 55%,
+        rgba(0,3,8,0.25)  88%,
+        transparent       100%
     );
     display: flex; flex-direction: column;
-    position: relative; z-index: 100;
-    border-right: none;    /* 境界線を削除 */
+    position: relative; z-index: 50;
+    border-right: none;
     transition: background var(--spd);
     overflow: hidden;
 }
 
-/* ── Status Bar ──────────────────────────────────────────────── */
+/* ── Status Bar（全幅・body直下） ─────────────────────────────── */
 #status-bar {
-    flex-shrink: 0;
+    position: absolute;
+    top: 0; left: 0; width: 100%;
     display: flex; align-items: center; justify-content: space-between;
     height: 48px; padding: 0 20px;
-    background: rgba(0,0,0,0.6);
+    background: rgba(0,0,0,0.75);
     border-bottom: 1px solid rgba(var(--ec-rgb),0.2);
+    backdrop-filter: blur(8px);
+    z-index: 100;
     transition: border-color var(--spd);
 }
 
@@ -179,6 +184,7 @@ body {
 #quick-config-panel {
     position: absolute; top: 48px; right: 0;
     width: 240px;
+    z-index: 101;
     background: rgba(0,8,16,0.97);
     border: 1px solid rgba(var(--ec-rgb),0.28);
     border-top: none; border-right: none;
@@ -215,14 +221,17 @@ body {
 .qc-toggle.active .qc-knob::after { left: calc(100% - 15px); background: var(--ec); box-shadow: 0 0 5px rgba(var(--ec-rgb),0.9); }
 .qc-toggle.inactive .qc-knob::after { background: rgba(255,255,255,0.2); }
 
-/* ── Sys Info Strip ──────────────────────────────────────────── */
+/* ── Sys Strip（全幅・body直下） ─────────────────────────────── */
 #sys-strip {
-    flex-shrink: 0;
+    position: absolute;
+    top: 48px; left: 0; width: 100%;
     display: flex; align-items: center;
     height: 34px; padding: 0 20px;
-    background: rgba(0,0,0,0.35);
+    background: rgba(0,0,0,0.55);
     border-bottom: 1px solid rgba(var(--ec-rgb),0.08);
+    backdrop-filter: blur(6px);
     gap: 0;
+    z-index: 99;
     transition: border-color var(--spd);
 }
 .sys-cell { display: flex; flex-direction: column; align-items: flex-start; padding: 0 12px; }
@@ -432,8 +441,14 @@ canvas {
 
 /* コーナーアークも jarvis-canvas に移行 */
 
-/* Particle Canvas */
-#particle-canvas { position: absolute; inset: 0; pointer-events: none; z-index: 8; }
+/* Particle Canvas → body直下・全画面・フィルター外 */
+#particle-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 10;    /* ヘッダー(99-100)より下、avatar(1)より上 */
+}
 
 /* ══════════════ OPTIONS OVERLAY ══════════════ */
 #options-overlay {

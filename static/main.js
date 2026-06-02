@@ -734,22 +734,18 @@ let _particleInitDone = false;
 function initParticleSystem() {
     particleCanvas = document.getElementById('particle-canvas');
     if (!particleCanvas) return;
-    const cc = document.getElementById('canvas-container');
-    const w = cc.clientWidth  || window.innerWidth  * 0.5;
-    const h = cc.clientHeight || window.innerHeight;
-    particleCanvas.width  = Math.round(w);
-    particleCanvas.height = Math.round(h);
+    // body直下・全画面サイズ
+    particleCanvas.width  = window.innerWidth;
+    particleCanvas.height = window.innerHeight;
     particleCtx = particleCanvas.getContext('2d');
     if (!_particleInitDone) {
         _particleInitDone = true;
         requestAnimationFrame(animateParticles);
     }
-
     window.addEventListener('resize', () => {
         if (!particleCanvas) return;
-        const cc2 = document.getElementById('canvas-container');
-        particleCanvas.width  = cc2.clientWidth;
-        particleCanvas.height = cc2.clientHeight;
+        particleCanvas.width  = window.innerWidth;
+        particleCanvas.height = window.innerHeight;
     });
 }
 
@@ -778,9 +774,9 @@ function animateParticles() {
     jAngle += 0.0025;
     const W = particleCanvas.width, H = particleCanvas.height;
     if (W > 0 && H > 0) {
-        // アバターの視覚的重心に合わせてリング中心をわずかに上方へ
+        // 両パネル（メッセージ＋アバター）の画面全体中央
         const cx = W * 0.5;
-        const cy = H * 0.47;
+        const cy = H * 0.52;
         const D  = Math.min(W, H);
         const rO = D * 0.46;   // 外リング（目盛り）
         const rS = D * 0.40;   // セグメントリング

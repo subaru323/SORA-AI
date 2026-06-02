@@ -8,13 +8,87 @@
 </head>
 <body>
 
-<!-- グローバル装飾 -->
+<!-- ══ グローバル装飾（position:fixed/absolute, flex外） ══ -->
 <div id="circuit-overlay"></div>
 <div id="mic-indicator"></div>
 <div id="game-badge">🎮 GAME ON</div>
 <div id="emotion-flash"></div>
 
-<!-- 顔登録オーバーレイ -->
+<!-- ══ 全幅ヘッダー（body直下, 両パネルをまたぐ） ══ -->
+<div id="status-bar">
+    <div id="sb-left">
+        <div id="sb-arc-wrap">
+            <svg id="sb-arc-svg" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="15" fill="none"
+                    stroke="rgba(0,212,255,0.15)" stroke-width="2"/>
+                <circle cx="18" cy="18" r="15" fill="none"
+                    stroke="var(--ec)" stroke-width="2"
+                    stroke-dasharray="60 94" stroke-linecap="round"
+                    transform="rotate(-90 18 18)" id="sb-arc-fill"/>
+            </svg>
+            <span id="sb-dot">●</span>
+        </div>
+        <span id="sb-title">SORA // NEXUS</span>
+    </div>
+    <div id="sb-center">
+        <span id="sb-emotion">◈ neutral</span>
+    </div>
+    <div id="sb-right">
+        <span id="sb-mode">STANDBY</span>
+        <button id="config-btn" title="Quick Config">⚙</button>
+    </div>
+</div>
+
+<!-- クイック設定パネル（status-barの下に展開） -->
+<div id="quick-config-panel">
+    <div class="qc-title">// SYSTEM CONFIG</div>
+    <div class="qc-row">
+        <span class="qc-label">MIRROR</span>
+        <div class="qc-toggle active" id="toggle-mirror">
+            <span class="qc-state">ACTIVE</span><div class="qc-knob"></div>
+        </div>
+    </div>
+    <div class="qc-row">
+        <span class="qc-label">VOICE</span>
+        <div class="qc-toggle active" id="toggle-voice">
+            <span class="qc-state">ACTIVE</span><div class="qc-knob"></div>
+        </div>
+    </div>
+    <div class="qc-row">
+        <span class="qc-label">CAMERA</span>
+        <div class="qc-toggle active" id="toggle-camera">
+            <span class="qc-state">ACTIVE</span><div class="qc-knob"></div>
+        </div>
+    </div>
+</div>
+
+<!-- システム情報ストリップ（全幅） -->
+<div id="sys-strip">
+    <div class="sys-cell">
+        <div class="sys-lbl">TIME</div>
+        <div class="sys-val" id="sys-clock">--:--:--</div>
+    </div>
+    <div class="sys-sep"></div>
+    <div class="sys-cell">
+        <div class="sys-lbl">STATUS</div>
+        <div class="sys-val" id="sys-status-val">STANDBY</div>
+    </div>
+    <div class="sys-sep"></div>
+    <div class="sys-cell">
+        <div class="sys-lbl">ENC</div>
+        <div class="sys-val">ARC-512</div>
+    </div>
+    <div class="sys-sep"></div>
+    <div class="sys-cell">
+        <div class="sys-lbl">NET</div>
+        <div class="sys-val" id="sys-net">OFFLINE</div>
+    </div>
+</div>
+
+<!-- ══ JARVIS全画面キャンバス（body直下 → フィルター外・全幅） ══ -->
+<canvas id="particle-canvas"></canvas>
+
+<!-- ══ 顔登録オーバーレイ ══ -->
 <div id="register-overlay">
     <div id="register-box">
         <div id="register-title">// FACE REGISTRATION</div>
@@ -33,128 +107,39 @@
     </div>
 </div>
 
-<!-- ══════════════ LEFT PANEL ══════════════ -->
+<!-- ══ LEFT PANEL: チャット・入力のみ ══ -->
 <div id="ui-panel">
-
-    <!-- コーナーブラケット -->
     <div class="corner tl"></div>
     <div class="corner tr"></div>
     <div class="corner bl"></div>
     <div class="corner br"></div>
-
-    <!-- ステータスバー -->
-    <div id="status-bar">
-        <div id="sb-left">
-            <div id="sb-arc-wrap">
-                <svg id="sb-arc-svg" viewBox="0 0 36 36">
-                    <circle cx="18" cy="18" r="15" fill="none"
-                        stroke="rgba(0,212,255,0.15)" stroke-width="2"/>
-                    <circle cx="18" cy="18" r="15" fill="none"
-                        stroke="var(--ec)" stroke-width="2"
-                        stroke-dasharray="60 94" stroke-linecap="round"
-                        transform="rotate(-90 18 18)" id="sb-arc-fill"/>
-                </svg>
-                <span id="sb-dot">●</span>
-            </div>
-            <span id="sb-title">SORA // NEXUS</span>
-        </div>
-        <div id="sb-center">
-            <span id="sb-emotion">◈ neutral</span>
-        </div>
-        <div id="sb-right">
-            <span id="sb-mode">STANDBY</span>
-            <button id="config-btn" title="Quick Config">⚙</button>
-        </div>
-    </div>
-
-    <!-- クイック設定パネル -->
-    <div id="quick-config-panel">
-        <div class="qc-title">// SYSTEM CONFIG</div>
-        <div class="qc-row">
-            <span class="qc-label">MIRROR</span>
-            <div class="qc-toggle active" id="toggle-mirror" data-target="mirror">
-                <span class="qc-state">ACTIVE</span>
-                <div class="qc-knob"></div>
-            </div>
-        </div>
-        <div class="qc-row">
-            <span class="qc-label">VOICE</span>
-            <div class="qc-toggle active" id="toggle-voice" data-target="voice">
-                <span class="qc-state">ACTIVE</span>
-                <div class="qc-knob"></div>
-            </div>
-        </div>
-        <div class="qc-row">
-            <span class="qc-label">CAMERA</span>
-            <div class="qc-toggle active" id="toggle-camera" data-target="camera">
-                <span class="qc-state">ACTIVE</span>
-                <div class="qc-knob"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- システム情報ストリップ -->
-    <div id="sys-strip">
-        <div class="sys-cell">
-            <div class="sys-lbl">TIME</div>
-            <div class="sys-val" id="sys-clock">--:--:--</div>
-        </div>
-        <div class="sys-sep"></div>
-        <div class="sys-cell">
-            <div class="sys-lbl">STATUS</div>
-            <div class="sys-val" id="sys-status-val">STANDBY</div>
-        </div>
-        <div class="sys-sep"></div>
-        <div class="sys-cell">
-            <div class="sys-lbl">ENC</div>
-            <div class="sys-val">ARC-512</div>
-        </div>
-        <div class="sys-sep"></div>
-        <div class="sys-cell">
-            <div class="sys-lbl">NET</div>
-            <div class="sys-val" id="sys-net">OFFLINE</div>
-        </div>
-    </div>
-
-    <!-- カメラプレビューは設定画面のみ (#options-overlay 内) に表示 -->
-
-    <!-- チャットログ -->
+    <!-- カメラプレビューは設定画面のみ -->
     <div id="chat-log">
         <div class="msg-status" id="system-status">アバターモデルを読み込んでいます...</div>
     </div>
-
-    <!-- テキスト入力 -->
     <div id="text-input-area"></div>
-
-    <!-- 起動ボタン -->
     <button id="start-btn">▶ &nbsp;SYSTEM BOOT</button>
 </div>
 
-<!-- ══════════════ RIGHT PANEL (AVATAR) ══════════════ -->
-<!-- canvas-container : フィルター対象。THREE.js + 背景エフェクトのみ -->
+<!-- ══ RIGHT PANEL: アバター背景エフェクト ══ -->
 <div id="canvas-container" class="avatar-filter-target">
     <div id="hex-bg"></div>
     <div id="emotion-aura"></div>
     <div id="scan-grid"></div>
     <div id="scan-line"></div>
-    <canvas id="particle-canvas"></canvas>
 </div>
 
-
-<!-- ══════════════ OPTIONS OVERLAY ══════════════ -->
+<!-- ══ OPTIONS OVERLAY ══ -->
 <div id="options-overlay">
     <div id="options-header">
         <h2>// SYSTEM OPTIONS</h2>
         <span id="options-hint">[ ESC ] to close</span>
     </div>
-
-    <!-- カメラプレビュー（設定画面内・canvas方式） -->
     <div id="camera-preview-section">
         <div class="qc-title" style="margin-bottom:10px;">// CAMERA FEED</div>
         <canvas id="camera-preview-canvas"></canvas>
         <div id="camera-no-signal">— NO SIGNAL —</div>
     </div>
-
     <div class="options-grid">
         <div class="options-section">
             <h3>▸ Visual &amp; Camera</h3>
@@ -218,8 +203,7 @@
                 </select>
             </div>
             <div style="margin-top:32px; color:rgba(0,212,255,0.3); font-size:12px; line-height:2;">
-                // Visual → real-time<br>
-                // Voice → next utterance
+                // Visual → real-time<br>// Voice → next utterance
             </div>
         </div>
     </div>
