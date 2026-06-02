@@ -419,14 +419,7 @@ canvas {
 }
 @keyframes scan-down { 0%{top:-120px;} 100%{top:100%;} }
 
-/* ── JARVIS Canvas Overlay ───────────────────────────────────── */
-/* position:fixed で body の transform に影響されず正確に配置 */
-#jarvis-canvas {
-    position: fixed;
-    top: 0; left: 0;
-    pointer-events: none;
-    z-index: 9000;  /* 最前面 */
-}
+/* JARVIS装飾はparticle-canvasに統合済み */
 
 /* ── JARVIS Ring Decorations ─────────────────────────────────── */
 /* リング・クロスヘア・パルスは jarvis-canvas（JS描画）に移行 */

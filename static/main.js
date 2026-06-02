@@ -761,8 +761,76 @@ function animateParticles() {
     if (!particleCtx || !particleCanvas) return;
     particleCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
 
-    if (window.isSpeaking && Math.random() < 0.6) spawnParticle();
+    // ── JARVIS リング・クロスヘア描画 ────────────────────────
+    jAngle += 0.003;
+    const W = particleCanvas.width, H = particleCanvas.height;
+    if (W > 0 && H > 0) {
+        const cx = W / 2, cy = H / 2;
+        const D  = Math.min(W, H);
+        const rO = D * 0.44, rM = D * 0.32, rI = D * 0.18;
+        // CSS変数から感情カラー取得
+        const ec  = getComputedStyle(document.documentElement).getPropertyValue('--ec').trim() || '#00d4ff';
+        const rgb = ec.startsWith('#')
+            ? `${parseInt(ec.slice(1,3),16)},${parseInt(ec.slice(3,5),16)},${parseInt(ec.slice(5,7),16)}`
+            : '0,212,255';
 
+        // Outer ring + 目盛り（回転）
+        particleCtx.save();
+        particleCtx.translate(cx, cy);
+        particleCtx.rotate(jAngle);
+        jRing(particleCtx, 0, 0, rO, rgb, 2, 0.8);
+        jTicks(particleCtx, 0, 0, rO, rgb);
+        [0, Math.PI/2, Math.PI, Math.PI*3/2].forEach(a => {
+            particleCtx.beginPath();
+            particleCtx.arc(Math.cos(a)*rO, Math.sin(a)*rO, 5, 0, Math.PI*2);
+            particleCtx.fillStyle = ec;
+            particleCtx.shadowColor = ec; particleCtx.shadowBlur = 14;
+            particleCtx.fill(); particleCtx.shadowBlur = 0;
+        });
+        particleCtx.restore();
+
+        // Mid ring（逆回転）
+        particleCtx.save();
+        particleCtx.translate(cx, cy);
+        particleCtx.rotate(-jAngle * 0.65);
+        jRing(particleCtx, 0, 0, rM, rgb, 1.5, 0.55);
+        [45,135,225,315].forEach(deg => {
+            const a = deg * Math.PI / 180;
+            particleCtx.beginPath();
+            particleCtx.arc(Math.cos(a)*rM, Math.sin(a)*rM, 3, 0, Math.PI*2);
+            particleCtx.fillStyle = ec;
+            particleCtx.shadowColor = ec; particleCtx.shadowBlur = 8;
+            particleCtx.fill(); particleCtx.shadowBlur = 0;
+        });
+        particleCtx.restore();
+
+        // Inner ring（静止・グロー）
+        jRing(particleCtx, cx, cy, rI, rgb, 2, 0.9);
+        jRing(particleCtx, cx, cy, rI * 0.7, rgb, 1, 0.35);
+
+        // クロスヘア
+        jCross(particleCtx, cx, cy, W, H, rgb);
+
+        // コーナーブラケット
+        jCorners(particleCtx, W, H, rgb, 42);
+
+        // 発話パルス
+        if (window.isSpeaking) {
+            const t = Date.now() / 1000;
+            [0, 0.7, 1.4].forEach(off => {
+                const prog  = ((t + off) % 2) / 2;
+                const pr    = rI + (rO - rI) * prog;
+                particleCtx.beginPath();
+                particleCtx.arc(cx, cy, pr, 0, Math.PI*2);
+                particleCtx.strokeStyle = `rgba(${rgb},${0.6*(1-prog)})`;
+                particleCtx.lineWidth = 2;
+                particleCtx.stroke();
+            });
+        }
+    }
+
+    // ── パーティクル ─────────────────────────────────────────
+    if (window.isSpeaking && Math.random() < 0.6) spawnParticle();
     particles = particles.filter(p => p.life > 0);
     for (const p of particles) {
         p.x    += p.vx;
@@ -899,208 +967,63 @@ function setSysNet(online) {
     if (el) { el.textContent = online ? 'ONLINE' : 'OFFLINE'; el.style.color = online ? '' : '#ff4433'; }
 }
 
-// ── JARVIS Canvas Engine ──────────────────────────────────────
-let jCanvas, jCtx, jAngle = 0;
+// ── JARVIS Drawing Helpers ────────────────────────────────────
+let jAngle = 0;
 
-/**
- * position:fixed の canvas を canvas-container の視覚的な位置に
- * getBoundingClientRect() で正確に合わせる。
- * body の transform: scaleX(-1) は getBoundingClientRect() の戻り値に
- * すでに反映されているため、視覚座標で正しく配置できる。
- */
-function initJarvisCanvas() {
-    jCanvas = document.getElementById('jarvis-canvas');
-    if (!jCanvas) return;
-    jCtx = jCanvas.getContext('2d');
-    resizeJarvisCanvas();
-    window.addEventListener('resize', resizeJarvisCanvas);
-    requestAnimationFrame(drawJarvis);
-}
-
-function resizeJarvisCanvas() {
-    const cc = document.getElementById('canvas-container');
-    if (!cc || !jCanvas) return;
-    const r  = cc.getBoundingClientRect();
-    const vw = window.innerWidth;
-    // body に transform:scaleX(-1) があるため CSS 座標は左右反転している。
-    // getBoundingClientRect() は視覚座標を返すので CSS left を逆算する。
-    jCanvas.style.left   = (vw - r.right) + 'px';
-    jCanvas.style.top    = r.top          + 'px';
-    jCanvas.style.width  = r.width        + 'px';
-    jCanvas.style.height = r.height       + 'px';
-    jCanvas.width  = Math.round(r.width);
-    jCanvas.height = Math.round(r.height);
-}
-
-function drawJarvis() {
-    requestAnimationFrame(drawJarvis);
-    if (!jCtx || !jCanvas || jCanvas.width === 0) return;
-
-    jCtx.clearRect(0, 0, jCanvas.width, jCanvas.height);
-    jAngle += 0.003;
-
-    const W = jCanvas.width, H = jCanvas.height;
-    const cx = W / 2, cy = H / 2;
-    // リング半径はキャンバス短辺基準
-    const minD = Math.min(W, H);
-    const rO = minD * 0.42;   // outer
-    const rM = minD * 0.31;   // mid
-    const rI = minD * 0.18;   // inner
-
-    // 感情カラー取得
-    const style = getComputedStyle(document.documentElement);
-    const ecRaw = style.getPropertyValue('--ec').trim() || '#00d4ff';
-
-    // ── Outer Ring（回転） ───────────────────────────────────
-    jCtx.save();
-    jCtx.translate(cx, cy);
-    jCtx.rotate(jAngle);
-    drawRing(jCtx, 0, 0, rO, ecRaw, 2, 0.75);
-    // 目盛り
-    drawTicks(jCtx, 0, 0, rO, ecRaw);
-    // マーカードット
-    [0, Math.PI/2, Math.PI, Math.PI*3/2].forEach(a => {
-        const x = Math.cos(a) * rO, y = Math.sin(a) * rO;
-        jCtx.beginPath();
-        jCtx.arc(x, y, 5, 0, Math.PI*2);
-        jCtx.fillStyle = ecRaw;
-        jCtx.shadowColor = ecRaw;
-        jCtx.shadowBlur = 12;
-        jCtx.fill();
-        jCtx.shadowBlur = 0;
-    });
-    jCtx.restore();
-
-    // ── Mid Ring（逆回転） ─────────────────────────────────
-    jCtx.save();
-    jCtx.translate(cx, cy);
-    jCtx.rotate(-jAngle * 0.7);
-    drawRing(jCtx, 0, 0, rM, ecRaw, 1.5, 0.5);
-    // 小マーカー
-    [45,135,225,315].forEach(deg => {
-        const a = deg * Math.PI / 180;
-        const x = Math.cos(a) * rM, y = Math.sin(a) * rM;
-        jCtx.beginPath();
-        jCtx.arc(x, y, 3, 0, Math.PI*2);
-        jCtx.fillStyle = ecRaw;
-        jCtx.shadowColor = ecRaw;
-        jCtx.shadowBlur = 8;
-        jCtx.fill();
-        jCtx.shadowBlur = 0;
-    });
-    jCtx.restore();
-
-    // ── Inner Ring（静止 + グロー） ────────────────────────
-    drawRing(jCtx, cx, cy, rI, ecRaw, 2, 0.9);
-    // 内側二重
-    drawRing(jCtx, cx, cy, rI * 0.7, ecRaw, 1, 0.35);
-
-    // ── Crosshair ────────────────────────────────────────
-    drawCrosshair(jCtx, cx, cy, W, H, ecRaw);
-
-    // ── Corner Brackets ──────────────────────────────────
-    drawCorners(jCtx, W, H, ecRaw, 40, 4);
-
-    // ── Speaking pulse ────────────────────────────────────
-    if (window.isSpeaking) {
-        const t = Date.now() / 1000;
-        [0, 0.6, 1.2].forEach(offset => {
-            const progress = ((t + offset) % 2) / 2;
-            const r = rI + (rO - rI) * progress;
-            const alpha = 0.6 * (1 - progress);
-            jCtx.beginPath();
-            jCtx.arc(cx, cy, r, 0, Math.PI*2);
-            jCtx.strokeStyle = hexToRgba(ecRaw, alpha);
-            jCtx.lineWidth = 2;
-            jCtx.stroke();
-        });
-    }
-}
-
-function drawRing(ctx, x, y, r, color, lw, alpha) {
+function jRing(ctx, x, y, r, color, lw, alpha) {
     ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI*2);
-    ctx.strokeStyle = hexToRgba(color, alpha);
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(${color},${alpha})`;
     ctx.lineWidth = lw;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 14;
+    ctx.shadowColor = `rgba(${color},1)`;
+    ctx.shadowBlur = 16;
     ctx.stroke();
     ctx.shadowBlur = 0;
 }
 
-function drawTicks(ctx, x, y, r, color) {
-    const total = 72;
-    for (let i = 0; i < total; i++) {
-        const a = (i * Math.PI * 2 / total) - Math.PI / 2;
-        const isMaj = i % 9 === 0;
-        const isMed = i % 3 === 0;
-        const len   = isMaj ? 16 : (isMed ? 9 : 4);
-        const alpha = isMaj ? 0.9 : (isMed ? 0.5 : 0.2);
-        const lw    = isMaj ? 2 : 1;
+function jTicks(ctx, x, y, r, color) {
+    for (let i = 0; i < 72; i++) {
+        const a   = (i * Math.PI * 2 / 72) - Math.PI / 2;
+        const maj = i % 9 === 0, med = i % 3 === 0;
+        const len = maj ? 16 : (med ? 9 : 4);
+        const op  = maj ? 0.9 : (med ? 0.5 : 0.2);
         ctx.beginPath();
         ctx.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
         ctx.lineTo(x + Math.cos(a) * (r - len), y + Math.sin(a) * (r - len));
-        ctx.strokeStyle = hexToRgba(color, alpha);
-        ctx.lineWidth = lw;
+        ctx.strokeStyle = `rgba(${color},${op})`;
+        ctx.lineWidth = maj ? 2 : 1;
         ctx.stroke();
     }
 }
 
-function drawCrosshair(ctx, cx, cy, W, H, color) {
-    const grad = (x0, y0, x1, y1) => {
-        const g = ctx.createLinearGradient(x0, y0, x1, y1);
-        g.addColorStop(0,   hexToRgba(color, 0));
-        g.addColorStop(0.3, hexToRgba(color, 0.5));
-        g.addColorStop(0.5, hexToRgba(color, 0.9));
-        g.addColorStop(0.7, hexToRgba(color, 0.5));
-        g.addColorStop(1,   hexToRgba(color, 0));
-        return g;
-    };
-    ctx.lineWidth = 1;
-    // Horizontal
-    ctx.beginPath();
-    ctx.moveTo(0, cy);
-    ctx.lineTo(W, cy);
-    ctx.strokeStyle = grad(0, cy, W, cy);
-    ctx.shadowColor = color; ctx.shadowBlur = 4;
-    ctx.stroke();
-    // Vertical
-    ctx.beginPath();
-    ctx.moveTo(cx, 0);
-    ctx.lineTo(cx, H);
-    ctx.strokeStyle = grad(cx, 0, cx, H);
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-    // Center dot
-    ctx.beginPath();
-    ctx.arc(cx, cy, 4, 0, Math.PI*2);
-    ctx.fillStyle = color;
-    ctx.shadowColor = color; ctx.shadowBlur = 10;
-    ctx.fill();
-    ctx.shadowBlur = 0;
-}
-
-function drawCorners(ctx, W, H, color, size, lw) {
-    const corners = [[0,0,1,1],[W,0,-1,1],[0,H,1,-1],[W,H,-1,-1]];
-    ctx.strokeStyle = color;
-    ctx.lineWidth = lw;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 8;
-    corners.forEach(([x, y, sx, sy]) => {
-        ctx.beginPath();
-        ctx.moveTo(x + sx * size, y);
-        ctx.lineTo(x, y);
-        ctx.lineTo(x, y + sy * size);
-        ctx.stroke();
+function jCross(ctx, cx, cy, W, H, color) {
+    [[0,cy,W,cy],[cx,0,cx,H]].forEach(([x0,y0,x1,y1]) => {
+        const g = ctx.createLinearGradient(x0,y0,x1,y1);
+        g.addColorStop(0,   `rgba(${color},0)`);
+        g.addColorStop(0.35,`rgba(${color},0.5)`);
+        g.addColorStop(0.5, `rgba(${color},0.9)`);
+        g.addColorStop(0.65,`rgba(${color},0.5)`);
+        g.addColorStop(1,   `rgba(${color},0)`);
+        ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1);
+        ctx.strokeStyle = g; ctx.lineWidth = 1;
+        ctx.shadowColor = `rgba(${color},0.6)`; ctx.shadowBlur = 4;
+        ctx.stroke(); ctx.shadowBlur = 0;
     });
-    ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(${color},1)`;
+    ctx.shadowColor = `rgba(${color},1)`; ctx.shadowBlur = 12;
+    ctx.fill(); ctx.shadowBlur = 0;
 }
 
-function hexToRgba(hex, alpha) {
-    const r = parseInt(hex.slice(1,3),16);
-    const g = parseInt(hex.slice(3,5),16);
-    const b = parseInt(hex.slice(5,7),16);
-    return `rgba(${r},${g},${b},${alpha})`;
+function jCorners(ctx, W, H, color, s) {
+    [[0,0,1,1],[W,0,-1,1],[0,H,1,-1],[W,H,-1,-1]].forEach(([x,y,sx,sy]) => {
+        ctx.beginPath();
+        ctx.moveTo(x+sx*s, y); ctx.lineTo(x,y); ctx.lineTo(x,y+sy*s);
+        ctx.strokeStyle = `rgba(${color},0.85)`;
+        ctx.lineWidth = 3;
+        ctx.shadowColor = `rgba(${color},1)`; ctx.shadowBlur = 10;
+        ctx.stroke(); ctx.shadowBlur = 0;
+    });
 }
 
 /** 発話中パルスリングの ON/OFF */
@@ -1128,9 +1051,7 @@ window.addEventListener('DOMContentLoaded', () => {
     updateRatePitchLabels();
     updateCSSFilters();
     startSysClock();
-    setSysNet(false);
-    // JARVIS canvas は THREE.js キャンバスが追加された後に初期化
-    setTimeout(initJarvisCanvas, 500); // 初期はオフライン表示
+    setSysNet(false); // 初期はオフライン表示
 
     // WS接続後にオンライン表示
     const _check = setInterval(() => {
