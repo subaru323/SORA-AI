@@ -54,6 +54,10 @@ renderer.setSize(width, height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 container.appendChild(renderer.domElement);
 
+// particle-canvas を DOM の最後尾に移動して THREE.js より確実に前面に表示
+const pc = container.querySelector('#particle-canvas');
+if (pc) container.appendChild(pc);
+
 const ambientLight = new THREE.AmbientLight(0xffeedd, 1.0);
 scene.add(ambientLight);
 const directionalLight = new THREE.DirectionalLight(0xfffbea, 1.0);

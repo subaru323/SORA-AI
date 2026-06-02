@@ -791,7 +791,7 @@ function animateParticles() {
         particleCtx.save();
         particleCtx.translate(cx, cy);
         particleCtx.rotate(jAngle);
-        jRing(particleCtx, 0, 0, rO, rgb, 2, 0.8);
+        jRing(particleCtx, 0, 0, rO, rgb, 3, 1.0);
         jTicks(particleCtx, 0, 0, rO, rgb);
         [0, Math.PI/2, Math.PI, Math.PI*3/2].forEach(a => {
             particleCtx.beginPath();
@@ -806,7 +806,7 @@ function animateParticles() {
         particleCtx.save();
         particleCtx.translate(cx, cy);
         particleCtx.rotate(-jAngle * 0.65);
-        jRing(particleCtx, 0, 0, rM, rgb, 1.5, 0.55);
+        jRing(particleCtx, 0, 0, rM, rgb, 2, 0.85);
         [45,135,225,315].forEach(deg => {
             const a = deg * Math.PI / 180;
             particleCtx.beginPath();
@@ -818,8 +818,8 @@ function animateParticles() {
         particleCtx.restore();
 
         // Inner ring（静止・グロー）
-        jRing(particleCtx, cx, cy, rI, rgb, 2, 0.9);
-        jRing(particleCtx, cx, cy, rI * 0.7, rgb, 1, 0.35);
+        jRing(particleCtx, cx, cy, rI, rgb, 3, 1.0);
+        jRing(particleCtx, cx, cy, rI * 0.72, rgb, 1.5, 0.5);
 
         // クロスヘア
         jCross(particleCtx, cx, cy, W, H, rgb);
@@ -989,7 +989,9 @@ function jRing(ctx, x, y, r, color, lw, alpha) {
     ctx.strokeStyle = `rgba(${color},${alpha})`;
     ctx.lineWidth = lw;
     ctx.shadowColor = `rgba(${color},1)`;
-    ctx.shadowBlur = 16;
+    ctx.shadowBlur = 28;
+    ctx.stroke();
+    // 2重描画でグローを強調
     ctx.stroke();
     ctx.shadowBlur = 0;
 }
