@@ -269,6 +269,18 @@ function connectWebSocket() {
         if (!isStarted) return;
         const msg = JSON.parse(event.data);
 
+        if (msg.type === 'system_error') {
+            // エラー内容をチャットログに赤字で表示
+            if (isStarted) {
+                const div = document.createElement('div');
+                div.className = 'msg-system-error';
+                div.textContent = msg.text;
+                chatLog.appendChild(div);
+                chatLog.scrollTop = chatLog.scrollHeight;
+            }
+            return;
+        }
+
         if (['register_step','register_captured','register_done','register_failed'].includes(msg.type)) {
             handleRegisterMessage(msg);
             return;

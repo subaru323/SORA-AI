@@ -300,7 +300,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     response = await retry_async_task(asyncio.to_thread, client.models.generate_content, model='gemini-2.5-flash', contents=system_instruction)
                     reply_text = response.text.strip()
                 except Exception:
-                    reply_text = "[emotion:happy]設定アップデートしてくれてありがとう！"
+                    reply_text = "[emotion:happy]設定を更新しました。承知いたしました。"
 
                 current_emotion = "neutral"
                 match = re.search(r'\[emotion:(.*?)\]', reply_text)
@@ -334,7 +334,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     response = await retry_async_task(asyncio.to_thread, client.models.generate_content, model='gemini-2.5-flash', contents=system_instruction)
                     reply_text = response.text.strip()
                 except Exception:
-                    reply_text = "[emotion:neutral]ふぃ〜、ハーフミラーの中からみんなを見てるよー。"
+                    reply_text = "[emotion:neutral]スタンバイモード。いつでもお声がけください。"
 
                 current_emotion = "neutral"
                 match = re.search(r'\[emotion:(.*?)\]', reply_text)
@@ -389,13 +389,27 @@ async def websocket_endpoint(websocket: WebSocket):
                                     await websocket.send_json({"type": "end"})
                                     continue
 
-                    # send_message_stream は同期イテレータ。
-                    # async関数内でそのままイテレートするとイベントループをブロックし
-                    # WebSocket keepalive が止まって切断される。
-                    # asyncio.to_thread でスレッドプールに逃がしてから全チャンクを収集する。
-                    response = await asyncio.to_thread(
-                        lambda: list(chat.send_message_stream(user_message))
-                    )
+                    # send_message_stream は同期イテレータ。スレッドで実行し
+                    # イベントループのブロックを防ぐ。
+                    # 429 RESOURCE_EXHAUSTED の場合は retry-after に従い自動リトライ。
+                    import time as _time
+
+                    def _collect_stream():
+                        for attempt in range(1, 4):
+                            try:
+                                return list(chat.send_message_stream(user_message))
+                            except Exception as _e:
+                                _es = str(_e)
+                                if ('429' in _es or 'RESOURCE_EXHAUSTED' in _es) and attempt < 3:
+                                    _m = re.search(r'retry in ([\d.]+)', _es)
+                                    _wait = min(float(_m.group(1)) if _m else 30, 90)
+                                    custom_log("WARN  ", "SYSTEM",
+                                        f"レート制限検知。{_wait:.0f}秒後にリトライ ({attempt}/3)")
+                                    _time.sleep(_wait)
+                                    continue
+                                raise _e
+
+                    response = await asyncio.to_thread(_collect_stream)
                     sentence = ""
                     current_emotion = "neutral"
                     _reset_requested = False
@@ -575,8 +589,19 @@ async def websocket_endpoint(websocket: WebSocket):
                         custom_log("INFO  ", "SYSTEM", "会話履歴リセット完了・新規チャットセッション開始")
 
                 except Exception as stream_err:
-                    custom_log("ERROR ", "GEMINI", f"Geminiストリーム接続の完全切断: {stream_err}")
-                    fallback_text = "通信に一時的な障害が発生しました。もう一度お願いいたします。"
+                    err_str = str(stream_err)
+                    custom_log("ERROR ", "GEMINI", f"Geminiストリーム接続の完全切断: {err_str}")
+
+                    # エラー内容をチャットに表示
+                    if '429' in err_str or 'RESOURCE_EXHAUSTED' in err_str:
+                        err_display = "// API QUOTA EXCEEDED: レート制限に達しました。しばらくお待ちください。"
+                        fallback_text = "申し訳ありません。APIの利用制限に達しました。しばらく後にお試しください。"
+                    else:
+                        short = err_str[:120].replace('\n', ' ')
+                        err_display = f"// SYSTEM ERROR: {short}"
+                        fallback_text = "通信に障害が発生しました。もう一度お試しください。"
+                    await websocket.send_json({"type": "system_error", "text": err_display})
+
                     mp3_data = await generate_cloud_audio(fallback_text, config.system_settings["voice"], config.system_settings["rate"], config.system_settings["pitch"])
                     if mp3_data:
                         b64_audio = base64.b64encode(mp3_data).decode('utf-8')

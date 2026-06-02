@@ -256,9 +256,9 @@ body {
 /* ── AI Message ──────────────────────────────────────────────── */
 .msg-ai {
     align-self: flex-start;
-    font-size: clamp(14px, 2.2vw, 28px);
+    font-size: clamp(11px, 1.4vw, 18px);   /* 縮小 */
     font-weight: 700;
-    color: var(--text);
+    color: var(--ec);    /* リング・感情カラーと統一 */
     line-height: 1.55;
     margin-bottom: 14px;
     padding: 12px 18px 10px 14px;
@@ -558,6 +558,23 @@ select:focus { outline: none; border-color: var(--ec); }
 .reg-step.active { border-color: var(--ec); color: var(--ec); box-shadow: 0 0 8px rgba(var(--ec-rgb),0.3); }
 .reg-step.done   { border-color: rgba(var(--ec-rgb),0.4); color: rgba(var(--ec-rgb),0.4); background: rgba(var(--ec-rgb),0.06); }
 #register-status { font-size: 11px; color: var(--text2); letter-spacing: 0.1em; animation: status-pulse 1.5s ease-in-out infinite alternate; }
+
+/* ── System Error Message ────────────────────────────────────── */
+.msg-system-error {
+    align-self: flex-start;
+    font-size: 11px;
+    font-family: 'Courier New', monospace;
+    color: #ff4433;
+    background: rgba(255,68,51,0.07);
+    border-left: 2px solid #ff4433;
+    border-radius: 0 6px 6px 6px;
+    padding: 6px 12px;
+    margin-bottom: 10px;
+    max-width: 96%;
+    word-break: break-all;
+    letter-spacing: 0.05em;
+    animation: msg-left 0.2s ease-out;
+}
 
 /* ── Portrait Adjustments ────────────────────────────────────── */
 @media (orientation: portrait), (max-aspect-ratio: 1/1) {

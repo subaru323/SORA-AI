@@ -206,7 +206,7 @@ class CameraSensor:
                 response = await retry_async_task(asyncio.to_thread, self.client.models.generate_content, model='gemini-2.5-flash', contents=prompt)
                 reply_text = response.text.strip()
             except Exception:
-                reply_text = "[emotion:happy]わっ、いらっしゃい！会いに来てくれて嬉しいな！"
+                reply_text = "[emotion:happy]お越しいただきました。歓迎いたします。"
 
             current_emotion = "neutral"
             match = re.search(r'\[emotion:(.*?)\]', reply_text)
