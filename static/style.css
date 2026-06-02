@@ -126,9 +126,9 @@ body {
     top: 0; left: 0; width: 100%;
     display: flex; align-items: center; justify-content: space-between;
     height: 48px; padding: 0 20px;
-    background: rgba(0,0,0,0.75);
-    border-bottom: 1px solid rgba(var(--ec-rgb),0.2);
-    backdrop-filter: blur(8px);
+    background: rgba(0,3,10,0.4);   /* 半透明でbody背景と統一 */
+    border-bottom: 1px solid rgba(var(--ec-rgb),0.15);
+    backdrop-filter: blur(3px);
     z-index: 100;
     transition: border-color var(--spd);
 }
@@ -228,9 +228,9 @@ body {
     top: 48px; left: 0; width: 100%;
     display: flex; align-items: center;
     height: 34px; padding: 0 20px;
-    background: rgba(0,0,0,0.55);
-    border-bottom: 1px solid rgba(var(--ec-rgb),0.08);
-    backdrop-filter: blur(6px);
+    background: rgba(0,2,8,0.25);   /* さらに薄く */
+    border-bottom: 1px solid rgba(var(--ec-rgb),0.06);
+    backdrop-filter: blur(2px);
     gap: 0;
     z-index: 99;
     transition: border-color var(--spd);
