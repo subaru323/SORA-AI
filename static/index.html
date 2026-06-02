@@ -1,216 +1,269 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SORA // NEXUS</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SORA // NEXUS</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- マイク録音インジケーター（最前面赤バー） -->
-    <div id="mic-indicator"></div>
+<!-- グローバル装飾 -->
+<div id="circuit-overlay"></div>
+<div id="mic-indicator"></div>
+<div id="game-badge">🎮 GAME ON</div>
+<div id="emotion-flash"></div>
 
-    <!-- ゲーム中バッジ（浮遊） -->
-    <div id="game-badge">🎮 GAME ON</div>
-
-    <!-- 感情フラッシュオーバーレイ -->
-    <div id="emotion-flash"></div>
-
-    <!-- 顔登録オーバーレイ -->
-    <div id="register-overlay">
-        <div id="register-box">
-            <div id="register-title">// FACE REGISTRATION</div>
-            <div id="register-preview-wrap">
-                <img id="register-preview-img" alt="camera">
-                <div id="register-face-guide"></div>
-                <div id="register-scan"></div>
-            </div>
-            <div id="register-instruction-text">準備中...</div>
-            <div id="register-progress-bar">
-                <div class="reg-step" id="reg-step-1">FRONT</div>
-                <div class="reg-step" id="reg-step-2">LEFT</div>
-                <div class="reg-step" id="reg-step-3">RIGHT</div>
-            </div>
-            <div id="register-status">待機中</div>
+<!-- 顔登録オーバーレイ -->
+<div id="register-overlay">
+    <div id="register-box">
+        <div id="register-title">// FACE REGISTRATION</div>
+        <div id="register-preview-wrap">
+            <img id="register-preview-img" alt="camera">
+            <div id="register-face-guide"></div>
+            <div id="register-scan"></div>
         </div>
+        <div id="register-instruction-text">準備中...</div>
+        <div id="register-progress-bar">
+            <div class="reg-step" id="reg-step-1">FRONT</div>
+            <div class="reg-step" id="reg-step-2">LEFT</div>
+            <div class="reg-step" id="reg-step-3">RIGHT</div>
+        </div>
+        <div id="register-status">待機中</div>
     </div>
+</div>
 
-    <!-- ══════════════ LEFT PANEL : UI ══════════════ -->
-    <div id="ui-panel">
+<!-- ══════════════ LEFT PANEL ══════════════ -->
+<div id="ui-panel">
 
-        <!-- ステータスバー -->
-        <div id="status-bar">
-            <div id="sb-left">
+    <!-- コーナーブラケット -->
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+
+    <!-- ステータスバー -->
+    <div id="status-bar">
+        <div id="sb-left">
+            <div id="sb-arc-wrap">
+                <svg id="sb-arc-svg" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" r="15" fill="none"
+                        stroke="rgba(0,212,255,0.15)" stroke-width="2"/>
+                    <circle cx="18" cy="18" r="15" fill="none"
+                        stroke="var(--ec)" stroke-width="2"
+                        stroke-dasharray="60 94" stroke-linecap="round"
+                        transform="rotate(-90 18 18)" id="sb-arc-fill"/>
+                </svg>
                 <span id="sb-dot">●</span>
-                <span id="sb-title">SORA // NEXUS</span>
             </div>
-            <div id="sb-center">
-                <span id="sb-emotion">◈ neutral</span>
-            </div>
-            <div id="sb-right">
-                <span id="sb-mode">STANDBY</span>
-                <button id="config-btn" title="Quick Config">⚙</button>
-            </div>
+            <span id="sb-title">SORA // NEXUS</span>
         </div>
-
-        <!-- クイック設定パネル -->
-        <div id="quick-config-panel">
-            <div class="qc-title">// SYSTEM CONFIG</div>
-            <div class="qc-row">
-                <span class="qc-label">MIRROR</span>
-                <div class="qc-toggle active" id="toggle-mirror" data-target="mirror">
-                    <span class="qc-state">ACTIVE</span>
-                    <div class="qc-knob"></div>
-                </div>
-            </div>
-            <div class="qc-row">
-                <span class="qc-label">VOICE</span>
-                <div class="qc-toggle active" id="toggle-voice" data-target="voice">
-                    <span class="qc-state">ACTIVE</span>
-                    <div class="qc-knob"></div>
-                </div>
-            </div>
-            <div class="qc-row">
-                <span class="qc-label">CAMERA</span>
-                <div class="qc-toggle active" id="toggle-camera" data-target="camera">
-                    <span class="qc-state">ACTIVE</span>
-                    <div class="qc-knob"></div>
-                </div>
-            </div>
+        <div id="sb-center">
+            <span id="sb-emotion">◈ neutral</span>
         </div>
-
-        <!-- カメラプレビューはオプション画面に移動 -->
-
-        <!-- チャットログ -->
-        <div id="chat-log">
-            <div class="msg-status" id="system-status">アバターモデルを読み込んでいます...</div>
-        </div>
-
-        <!-- テキスト入力エリア（JS が追記） -->
-        <div id="text-input-area"></div>
-
-        <!-- 起動ボタン -->
-        <button id="start-btn">▶ &nbsp;SYSTEM BOOT</button>
-
-    </div>
-
-    <!-- ══════════════ RIGHT PANEL : AVATAR ══════════════ -->
-    <div id="canvas-container" class="avatar-filter-target">
-        <div id="hex-bg"></div>
-        <div id="emotion-aura"></div>
-        <div id="scan-grid"></div>
-        <div id="scan-line"></div>
-        <canvas id="particle-canvas"></canvas>
-    </div>
-
-    <!-- ══════════════ OPTIONS OVERLAY ══════════════ -->
-    <div id="options-overlay">
-        <div id="options-header">
-            <h2>// SYSTEM OPTIONS</h2>
-            <span id="options-hint">[ ESC ] to close</span>
-        </div>
-
-        <!-- カメラプレビュー（設定画面のみ表示） -->
-        <div id="camera-preview-section">
-            <div class="qc-title" style="margin-bottom:10px;">// CAMERA FEED</div>
-            <img id="camera-preview"
-                 src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
-                 alt="Camera Feed">
-            <div id="camera-no-signal">— NO SIGNAL —</div>
-        </div>
-
-        <div class="options-grid">
-
-            <div class="options-section">
-                <h3>▸ Visual &amp; Camera</h3>
-
-                <div class="ctrl-group">
-                    <label>📷 カメラデバイス</label>
-                    <select id="param-camera">
-                        <option value="0" selected>Camera 0 (Internal)</option>
-                        <option value="1">Camera 1 (USB)</option>
-                        <option value="2">Camera 2</option>
-                    </select>
-                </div>
-
-                <div class="ctrl-group">
-                    <label>左右反転モード</label>
-                    <select id="param-mirror">
-                        <option value="true" selected>反転 ON</option>
-                        <option value="false">反転 OFF</option>
-                    </select>
-                </div>
-
-                <div class="ctrl-group">
-                    <label>Brightness <span class="vbadge" id="val-bright">0.7</span></label>
-                    <input type="range" id="param-bright" min="0.3" max="1.5" step="0.05" value="0.7">
-                </div>
-                <div class="ctrl-group">
-                    <label>Contrast <span class="vbadge" id="val-contrast">1.5</span></label>
-                    <input type="range" id="param-contrast" min="0.5" max="2.5" step="0.05" value="1.5">
-                </div>
-                <div class="ctrl-group">
-                    <label>Saturate <span class="vbadge" id="val-saturate">3.0</span></label>
-                    <input type="range" id="param-saturate" min="0.5" max="4.0" step="0.1" value="3.0">
-                </div>
-
-                <div class="ctrl-group" style="margin-top:20px">
-                    <label>Position X <span class="vbadge" id="val-vrm-x">0.00</span></label>
-                    <input type="range" id="param-vrm-x" min="-1.0" max="1.0" step="0.02" value="0.0">
-                </div>
-                <div class="ctrl-group">
-                    <label>Position Y <span class="vbadge" id="val-vrm-y">-0.15</span></label>
-                    <input type="range" id="param-vrm-y" min="-1.0" max="1.0" step="0.02" value="-0.15">
-                </div>
-                <div class="ctrl-group">
-                    <label>Scale <span class="vbadge" id="val-vrm-scale">1.18</span></label>
-                    <input type="range" id="param-vrm-scale" min="0.5" max="2.0" step="0.02" value="1.18">
-                </div>
-            </div>
-
-            <div class="options-section">
-                <h3>▸ Voice Synthesis</h3>
-
-                <div class="ctrl-group">
-                    <label>Rate <span class="vbadge" id="val-rate">+50%</span></label>
-                    <input type="range" id="param-rate" min="0" max="100" step="5" value="50">
-                </div>
-                <div class="ctrl-group">
-                    <label>Pitch <span class="vbadge" id="val-pitch">+30Hz</span></label>
-                    <input type="range" id="param-pitch" min="0" max="50" step="5" value="30">
-                </div>
-                <div class="ctrl-group">
-                    <label>Voice</label>
-                    <select id="param-voice">
-                        <option value="ja-JP-NanamiNeural" selected>Nanami（女性・標準）</option>
-                        <option value="ja-JP-KeitaNeural">Keita（男性・標準）</option>
-                        <option value="ja-JP-AoiNeural">Aoi（女性・自然）</option>
-                        <option value="ja-JP-DaichiNeural">Daichi（男性・自然）</option>
-                    </select>
-                </div>
-
-                <div style="margin-top:32px; color:rgba(255,255,255,0.25); font-size:13px; font-family:monospace; line-height:1.8;">
-                    // Visual items apply in real-time.<br>
-                    // Voice items apply from next utterance.
-                </div>
-            </div>
-
+        <div id="sb-right">
+            <span id="sb-mode">STANDBY</span>
+            <button id="config-btn" title="Quick Config">⚙</button>
         </div>
     </div>
 
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://unpkg.com/three@0.154.0/build/three.module.js",
-            "three/addons/": "https://unpkg.com/three@0.154.0/examples/jsm/",
-            "@pixiv/three-vrm": "https://unpkg.com/@pixiv/three-vrm@2.0.0/lib/three-vrm.module.js"
-        }
+    <!-- クイック設定パネル -->
+    <div id="quick-config-panel">
+        <div class="qc-title">// SYSTEM CONFIG</div>
+        <div class="qc-row">
+            <span class="qc-label">MIRROR</span>
+            <div class="qc-toggle active" id="toggle-mirror" data-target="mirror">
+                <span class="qc-state">ACTIVE</span>
+                <div class="qc-knob"></div>
+            </div>
+        </div>
+        <div class="qc-row">
+            <span class="qc-label">VOICE</span>
+            <div class="qc-toggle active" id="toggle-voice" data-target="voice">
+                <span class="qc-state">ACTIVE</span>
+                <div class="qc-knob"></div>
+            </div>
+        </div>
+        <div class="qc-row">
+            <span class="qc-label">CAMERA</span>
+            <div class="qc-toggle active" id="toggle-camera" data-target="camera">
+                <span class="qc-state">ACTIVE</span>
+                <div class="qc-knob"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- システム情報ストリップ -->
+    <div id="sys-strip">
+        <div class="sys-cell">
+            <div class="sys-lbl">TIME</div>
+            <div class="sys-val" id="sys-clock">--:--:--</div>
+        </div>
+        <div class="sys-sep"></div>
+        <div class="sys-cell">
+            <div class="sys-lbl">STATUS</div>
+            <div class="sys-val" id="sys-status-val">STANDBY</div>
+        </div>
+        <div class="sys-sep"></div>
+        <div class="sys-cell">
+            <div class="sys-lbl">ENC</div>
+            <div class="sys-val">ARC-512</div>
+        </div>
+        <div class="sys-sep"></div>
+        <div class="sys-cell">
+            <div class="sys-lbl">NET</div>
+            <div class="sys-val" id="sys-net">OFFLINE</div>
+        </div>
+    </div>
+
+    <!-- カメラプレビュー（設定画面のみ） -->
+    <img id="camera-preview"
+         src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+         alt="Camera" style="display:none;">
+
+    <!-- チャットログ -->
+    <div id="chat-log">
+        <div class="msg-status" id="system-status">アバターモデルを読み込んでいます...</div>
+    </div>
+
+    <!-- テキスト入力 -->
+    <div id="text-input-area"></div>
+
+    <!-- 起動ボタン -->
+    <button id="start-btn">▶ &nbsp;SYSTEM BOOT</button>
+</div>
+
+<!-- ══════════════ RIGHT PANEL (AVATAR) ══════════════ -->
+<div id="canvas-container" class="avatar-filter-target">
+
+    <!-- 背景レイヤー -->
+    <div id="hex-bg"></div>
+    <div id="emotion-aura"></div>
+    <div id="scan-grid"></div>
+    <div id="scan-line"></div>
+
+    <!-- JARVIS リング装飾 -->
+    <div id="av-ring-outer"></div>
+    <div id="av-ring-mid"></div>
+    <div id="av-ring-inner"></div>
+    <svg id="av-tick-svg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+    <div id="av-cross-h"></div>
+    <div id="av-cross-v"></div>
+
+    <!-- 発話時パルスリング -->
+    <div id="av-pulse-1" class="av-pulse"></div>
+    <div id="av-pulse-2" class="av-pulse"></div>
+
+    <!-- コーナーブラケット -->
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+
+    <!-- コーナーアーク（四隅の扇形） -->
+    <div class="av-corner-arc tl"></div>
+    <div class="av-corner-arc tr"></div>
+    <div class="av-corner-arc bl"></div>
+    <div class="av-corner-arc br"></div>
+
+    <!-- パーティクルキャンバス -->
+    <canvas id="particle-canvas"></canvas>
+</div>
+
+<!-- ══════════════ OPTIONS OVERLAY ══════════════ -->
+<div id="options-overlay">
+    <div id="options-header">
+        <h2>// SYSTEM OPTIONS</h2>
+        <span id="options-hint">[ ESC ] to close</span>
+    </div>
+
+    <!-- カメラプレビュー（設定画面内） -->
+    <div id="camera-preview-section">
+        <div class="qc-title" style="margin-bottom:10px;">// CAMERA FEED</div>
+        <img id="camera-preview" alt="Camera Feed">
+        <div id="camera-no-signal">— NO SIGNAL —</div>
+    </div>
+
+    <div class="options-grid">
+        <div class="options-section">
+            <h3>▸ Visual &amp; Camera</h3>
+            <div class="ctrl-group">
+                <label>📷 カメラデバイス</label>
+                <select id="param-camera">
+                    <option value="0" selected>Camera 0 (Internal)</option>
+                    <option value="1">Camera 1 (USB)</option>
+                    <option value="2">Camera 2</option>
+                </select>
+            </div>
+            <div class="ctrl-group">
+                <label>左右反転モード</label>
+                <select id="param-mirror">
+                    <option value="true" selected>反転 ON</option>
+                    <option value="false">反転 OFF</option>
+                </select>
+            </div>
+            <div class="ctrl-group">
+                <label>Brightness <span class="vbadge" id="val-bright">0.7</span></label>
+                <input type="range" id="param-bright" min="0.3" max="1.5" step="0.05" value="0.7">
+            </div>
+            <div class="ctrl-group">
+                <label>Contrast <span class="vbadge" id="val-contrast">1.5</span></label>
+                <input type="range" id="param-contrast" min="0.5" max="2.5" step="0.05" value="1.5">
+            </div>
+            <div class="ctrl-group">
+                <label>Saturate <span class="vbadge" id="val-saturate">3.0</span></label>
+                <input type="range" id="param-saturate" min="0.5" max="4.0" step="0.1" value="3.0">
+            </div>
+            <div class="ctrl-group" style="margin-top:20px">
+                <label>Position X <span class="vbadge" id="val-vrm-x">0.00</span></label>
+                <input type="range" id="param-vrm-x" min="-1.0" max="1.0" step="0.02" value="0.0">
+            </div>
+            <div class="ctrl-group">
+                <label>Position Y <span class="vbadge" id="val-vrm-y">-0.15</span></label>
+                <input type="range" id="param-vrm-y" min="-1.0" max="1.0" step="0.02" value="-0.15">
+            </div>
+            <div class="ctrl-group">
+                <label>Scale <span class="vbadge" id="val-vrm-scale">1.18</span></label>
+                <input type="range" id="param-vrm-scale" min="0.5" max="2.0" step="0.02" value="1.18">
+            </div>
+        </div>
+        <div class="options-section">
+            <h3>▸ Voice Synthesis</h3>
+            <div class="ctrl-group">
+                <label>Rate <span class="vbadge" id="val-rate">+50%</span></label>
+                <input type="range" id="param-rate" min="0" max="100" step="5" value="50">
+            </div>
+            <div class="ctrl-group">
+                <label>Pitch <span class="vbadge" id="val-pitch">+30Hz</span></label>
+                <input type="range" id="param-pitch" min="0" max="50" step="5" value="30">
+            </div>
+            <div class="ctrl-group">
+                <label>Voice</label>
+                <select id="param-voice">
+                    <option value="ja-JP-NanamiNeural" selected>Nanami（女性・標準）</option>
+                    <option value="ja-JP-KeitaNeural">Keita（男性・標準）</option>
+                    <option value="ja-JP-AoiNeural">Aoi（女性・自然）</option>
+                    <option value="ja-JP-DaichiNeural">Daichi（男性・自然）</option>
+                </select>
+            </div>
+            <div style="margin-top:32px; color:rgba(0,212,255,0.3); font-size:12px; line-height:2;">
+                // Visual → real-time<br>
+                // Voice → next utterance
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://unpkg.com/three@0.154.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.154.0/examples/jsm/",
+        "@pixiv/three-vrm": "https://unpkg.com/@pixiv/three-vrm@2.0.0/lib/three-vrm.module.js"
     }
-    </script>
-
-    <script type="module" src="avatar.js"></script>
-    <script type="module" src="main.js"></script>
+}
+</script>
+<script type="module" src="avatar.js"></script>
+<script type="module" src="main.js"></script>
 </body>
 </html>

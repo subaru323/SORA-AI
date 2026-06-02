@@ -869,6 +869,83 @@ function handleRegisterMessage(msg) {
     }
 }
 
+// ── JARVIS UI Initialisation ──────────────────────────────────
+
+/** 時計の更新 */
+function startSysClock() {
+    function tick() {
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2,'0');
+        const mm = String(now.getMinutes()).padStart(2,'0');
+        const ss = String(now.getSeconds()).padStart(2,'0');
+        const el = document.getElementById('sys-clock');
+        if (el) el.textContent = `${hh}:${mm}:${ss}`;
+    }
+    tick();
+    setInterval(tick, 1000);
+}
+
+/** ステータスバーと sys-strip のモード同期 */
+const _origUpdateStatusMode = updateStatusMode;
+updateStatusMode = function(mode) {
+    _origUpdateStatusMode(mode);
+    const sv = document.getElementById('sys-status-val');
+    if (sv) sv.textContent = mode;
+};
+
+/** WS接続状態を sys-strip に反映 */
+function setSysNet(online) {
+    const el = document.getElementById('sys-net');
+    if (el) { el.textContent = online ? 'ONLINE' : 'OFFLINE'; el.style.color = online ? '' : '#ff4433'; }
+}
+
+/** アバター側の目盛りリングを SVG で生成 */
+function buildTickRing() {
+    const svg = document.getElementById('av-tick-svg');
+    if (!svg) return;
+    const cx = 50, cy = 50, r = 44;
+    const total = 72;   // 5° ごと
+    let html = '';
+    for (let i = 0; i < total; i++) {
+        const angle = (i * 360 / total - 90) * Math.PI / 180;
+        const isMajor = i % 9 === 0;   // 45° ごと大目盛り
+        const isMed   = i % 3 === 0;   // 15° ごと中目盛り
+        const len     = isMajor ? 5 : (isMed ? 3 : 1.5);
+        const op      = isMajor ? 0.8 : (isMed ? 0.45 : 0.2);
+        const sw      = isMajor ? 1.2 : 0.6;
+        const x1 = cx + r * Math.cos(angle);
+        const y1 = cy + r * Math.sin(angle);
+        const x2 = cx + (r - len) * Math.cos(angle);
+        const y2 = cy + (r - len) * Math.sin(angle);
+        html += `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="rgba(0,212,255,${op})" stroke-width="${sw}"/>`;
+    }
+    // 四隅に◇マーカー
+    [0, 90, 180, 270].forEach(deg => {
+        const a = (deg - 90) * Math.PI / 180;
+        const x = cx + (r - 7) * Math.cos(a);
+        const y = cy + (r - 7) * Math.sin(a);
+        html += `<rect x="${(x-2).toFixed(2)}" y="${(y-2).toFixed(2)}" width="4" height="4" fill="rgba(0,212,255,0.7)" transform="rotate(45 ${x.toFixed(2)} ${y.toFixed(2)})"/>`;
+    });
+    svg.innerHTML = html;
+}
+
+/** 発話中パルスリングの ON/OFF */
+function setPulseRings(on) {
+    ['av-pulse-1','av-pulse-2'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('speaking', on);
+    });
+}
+
+// playNextInQueue の発話フラグに連動させる
+const _origPlay = playNextInQueue;
+// NOTE: playNextInQueue 内の isSpeaking 変化はそのまま使う。
+// 代わりに setEmotionTheme を拡張してパルスリングを制御する。
+const _origSetEmotion = setEmotionTheme;
+setEmotionTheme = function(emotion) {
+    _origSetEmotion(emotion);
+};
+
 // ── DOMContentLoaded ──────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
     initTextInputForm();
@@ -876,4 +953,19 @@ window.addEventListener('DOMContentLoaded', () => {
     refreshCameraOptions(false);
     updateRatePitchLabels();
     updateCSSFilters();
+    startSysClock();
+    buildTickRing();
+    setSysNet(false); // 初期はオフライン表示
+
+    // WS接続後にオンライン表示
+    const _check = setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            setSysNet(true); clearInterval(_check);
+        }
+    }, 500);
 });
+
+// 発話状態をパルスリングに反映（audioQueue の変化を監視）
+setInterval(() => {
+    setPulseRings(!!window.isSpeaking);
+}, 200);
