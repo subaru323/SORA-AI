@@ -23,7 +23,8 @@ body.emo-surprised{ --ec:#ffffff; --ec-rgb:255,255,255; --bg2:#080a08; --text:#f
 
 body {
     overflow: hidden;
-    background: var(--bg);
+    /* 全画面統一背景（canvas-container・ui-panel 両方の下地） */
+    background: radial-gradient(ellipse at 70% 55%, #001e30 0%, #000f1e 45%, #000608 100%);
     display: flex;
     width: 100vw;
     height: 100vh;
@@ -105,11 +106,11 @@ body {
     width: 50vw; height: 100vh;
     /* ヘッダー2段（48+34px=82px）分の上部余白 */
     padding-top: 82px;
-    /* 右端をフェードアウトしてシームレスに */
+    /* 右端をフェードアウトしてアバター側と統一感を出す */
     background: linear-gradient(to right,
-        rgba(0,5,12,0.88) 0%,
-        rgba(0,5,12,0.80) 55%,
-        rgba(0,3,8,0.25)  88%,
+        rgba(0,4,10,0.82) 0%,
+        rgba(0,4,10,0.70) 50%,
+        rgba(0,2,6,0.15)  85%,
         transparent       100%
     );
     display: flex; flex-direction: column;
@@ -387,7 +388,7 @@ body {
     width: 50vw; height: 100vh;
     position: relative;
     z-index: 20;   /* particle-canvas(z:10)より上 → リングがアバターの後ろに */
-    background: radial-gradient(ellipse at 48% 55%, #002a3e 0%, #001522 45%, #000a14 100%);
+    background: transparent; /* body の統一背景をそのまま透過 */
     overflow: hidden;
     transition: background var(--spd);
 }
