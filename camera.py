@@ -63,6 +63,8 @@ class CameraSensor:
         custom_log("INFO  ", "SYSTEM", f"MediaPipe 統合型エッジAIパイプライン起動成功 (デバイスID: {current_cap_id})")
         preview_count = 0
         consecutive_face_frames = 0
+        _prev_face_count   = -1   # 前フレームの顔数（変化検知用）
+        _last_status_send  = 0.0  # 最後にvisitor_statusを送った時刻
 
         while self.running:
             if config.is_interacting and not config.registration_mode:
@@ -166,11 +168,13 @@ class CameraSensor:
                                 vc = visitor["visit_count"]
                                 visitor_info = f" / 来訪{vc}回目のリピーター"
                                 log_visit(visitor["id"])
+                                config.today_detected_count += 1
                                 custom_log(" INFO ", "CAMERA", f"リピーター検知: Visitor-{visitor['id']} ({vc}回目)")
                             else:
                                 new_v = register_visitor(face_crop)
                                 log_visit(new_v["id"])
                                 visitor_info = " / 初来場"
+                                config.today_detected_count += 1
                                 custom_log(" INFO ", "CAMERA", f"新規来場者登録: Visitor-{new_v['id']}")
                     except Exception as ve:
                         custom_log("WARN  ", "CAMERA", f"来場者認識エラー: {ve}")
@@ -180,6 +184,23 @@ class CameraSensor:
 
                     if config.main_loop:
                         asyncio.run_coroutine_threadsafe(self._process_spontaneous_greeting(local_features), config.main_loop)
+
+            # 顔検知数をconfigに反映し、変化があればWSへ通知
+            face_count_now = len(face_result.detections) if face_result.detections else 0
+            config.current_face_count = face_count_now
+            now_t = time.monotonic()
+            if (face_count_now != _prev_face_count or now_t - _last_status_send > 10):
+                _prev_face_count  = face_count_now
+                _last_status_send = now_t
+                if config.active_websocket and config.main_loop:
+                    asyncio.run_coroutine_threadsafe(
+                        config.active_websocket.send_json({
+                            "type":    "visitor_status",
+                            "today":   config.today_detected_count,
+                            "current": face_count_now,
+                        }),
+                        config.main_loop
+                    )
 
             time.sleep(0.03)
         cap.release()

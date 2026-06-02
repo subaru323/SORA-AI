@@ -269,6 +269,22 @@ function connectWebSocket() {
         if (!isStarted) return;
         const msg = JSON.parse(event.data);
 
+        if (msg.type === 'visitor_status') {
+            const todayEl = document.getElementById('sys-today-count');
+            const nowEl   = document.getElementById('sys-now-count');
+            if (todayEl) todayEl.textContent = `${msg.today} 人`;
+            if (nowEl) {
+                if (msg.current > 0) {
+                    nowEl.textContent = `${msg.current} 人検知中`;
+                    nowEl.style.color = '#00ff88';
+                } else {
+                    nowEl.textContent = '-- 人';
+                    nowEl.style.color = '';
+                }
+            }
+            return;
+        }
+
         if (msg.type === 'system_error') {
             // エラー内容をチャットログに赤字で表示
             if (isStarted) {
