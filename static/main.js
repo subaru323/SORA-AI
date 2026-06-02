@@ -53,26 +53,17 @@ function setEmotionTheme(emotion) {
     if (emotion === currentEmotionTheme) return;
     currentEmotionTheme = emotion;
 
-    // UI は常に JARVIS ブルー固定 → body クラス変更なし
-    // リングのみカラーパルスで感情を表現（animateParticles 側で処理）
-
-    // ステータスラベルの更新
+    // animateParticles が --ec / --ec-rgb を毎フレーム更新して
+    // リング・UI全要素を同時にパルスさせる。ここではラベルとフラッシュのみ。
     const sbEmo = document.getElementById('sb-emotion');
     if (sbEmo) sbEmo.textContent = EMOTION_LABELS[emotion] || '◈ ' + emotion;
 
-    // 一瞬だけフラッシュ（感情色でフラッシュするために一時的にクラス付与→即削除）
-    document.body.classList.remove(...[...document.body.classList].filter(c => c.startsWith('emo-')));
-    if (emotion !== 'neutral') document.body.classList.add('emo-' + emotion);
     const flash = document.getElementById('emotion-flash');
     if (flash) {
         flash.classList.remove('flash');
         void flash.offsetWidth;
         flash.classList.add('flash');
     }
-    // フラッシュ後はUIを青に戻す
-    setTimeout(() => {
-        document.body.classList.remove(...[...document.body.classList].filter(c => c.startsWith('emo-')));
-    }, 400);
 }
 
 // ── Status HUD ────────────────────────────────────────────────
@@ -817,24 +808,31 @@ function animateParticles() {
         const rI = D * 0.072;  // 内リング
 
         // JARVIS ブルーを軸にして感情ごとにゆっくりパルス
-        const BLUE = [0, 212, 255];   // #00d4ff JARVIS blue
+        // → 計算結果を --ec / --ec-rgb に書き込んでUI全体も同期させる
+        const BLUE = [0, 212, 255];
         const EMOTION_COLORS = {
-            happy:     [255, 221,  68],  // gold
-            sad:       [ 68, 136, 255],  // deep blue
-            angry:     [255,  68,  51],  // red
-            surprised: [255, 255, 255],  // white
+            happy:     [255, 221,  68],
+            sad:       [ 68, 136, 255],
+            angry:     [255,  68,  51],
+            surprised: [255, 255, 255],
         };
         const tSec = Date.now() / 1000;
-        let rgb;
         const emo = currentEmotionTheme;
+        let rgbArr;
         if (emo === 'neutral' || !EMOTION_COLORS[emo]) {
-            rgb = BLUE.join(',');
+            rgbArr = BLUE;
         } else {
             const ec2 = EMOTION_COLORS[emo];
             // 6秒周期でゆっくり青↔感情色を往復
-            const f = (Math.sin(tSec * Math.PI / 3) + 1) / 2;  // 0-1, period=6s
-            rgb = BLUE.map((v, i) => Math.round(v + (ec2[i] - v) * (1 - f))).join(',');
+            const f = (Math.sin(tSec * Math.PI / 3) + 1) / 2;
+            rgbArr = BLUE.map((v, i) => Math.round(v + (ec2[i] - v) * (1 - f)));
         }
+        const rgb = rgbArr.join(',');
+        const hex = '#' + rgbArr.map(v => v.toString(16).padStart(2, '0')).join('');
+
+        // UI全体のCSS変数を毎フレーム更新（リング・ボーダー・テキスト全部が同期）
+        document.body.style.setProperty('--ec',     hex);
+        document.body.style.setProperty('--ec-rgb', rgb);
 
         // ── 1. 外リング＋72目盛り（正回転）
         particleCtx.save();
