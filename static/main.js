@@ -276,9 +276,9 @@ function connectWebSocket() {
         }
 
         if (msg.type === 'camera_preview') {
-            const previewImg = document.getElementById('camera-preview');
-            if (previewImg) {
-                previewImg.style.display = 'block';
+            // カメラプレビューは設定画面内の img のみ更新（メイン画面には表示しない）
+            const previewImg = document.querySelector('#camera-preview-section #camera-preview');
+            if (previewImg && !cameraHidden) {
                 previewImg.src = 'data:image/jpeg;base64,' + msg.image;
             }
             return;
@@ -723,14 +723,20 @@ function initTextInputForm() {
 }
 
 // ── Particle System ───────────────────────────────────────────
+let _particleInitDone = false;
 function initParticleSystem() {
     particleCanvas = document.getElementById('particle-canvas');
     if (!particleCanvas) return;
     const cc = document.getElementById('canvas-container');
-    particleCanvas.width  = cc.clientWidth;
-    particleCanvas.height = cc.clientHeight;
+    const w = cc.clientWidth  || window.innerWidth  * 0.5;
+    const h = cc.clientHeight || window.innerHeight;
+    particleCanvas.width  = Math.round(w);
+    particleCanvas.height = Math.round(h);
     particleCtx = particleCanvas.getContext('2d');
-    requestAnimationFrame(animateParticles);
+    if (!_particleInitDone) {
+        _particleInitDone = true;
+        requestAnimationFrame(animateParticles);
+    }
 
     window.addEventListener('resize', () => {
         if (!particleCanvas) return;
@@ -1051,7 +1057,9 @@ window.addEventListener('DOMContentLoaded', () => {
     updateRatePitchLabels();
     updateCSSFilters();
     startSysClock();
-    setSysNet(false); // 初期はオフライン表示
+    setSysNet(false);
+    // JARVISリングをシステム起動前から常時描画
+    initParticleSystem(); // 初期はオフライン表示
 
     // WS接続後にオンライン表示
     const _check = setInterval(() => {

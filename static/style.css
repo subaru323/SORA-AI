@@ -371,7 +371,8 @@ body {
 #canvas-container {
     width: 50vw; height: 100vh;
     position: relative;
-    background: radial-gradient(ellipse at center, #001520 0%, #000810 100%);
+    /* フィルター(brightness 0.7)後でも視認できるよう少し明るく */
+    background: radial-gradient(ellipse at 50% 80%, #003040 0%, #001828 50%, #000c14 100%);
     overflow: hidden;
     transition: background var(--spd);
 }
