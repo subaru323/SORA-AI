@@ -37,6 +37,8 @@ os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
 
 import config
 from camera import CameraSensor
+from memory import get_memory_context, save_memory, get_all_memories
+from visitors import get_stats
 
 camera_sensor = None
 LOG_LEVEL_ORDER = {"DEBUG": 10, "INFO": 20, "WARN": 30, "ERROR": 40}
@@ -181,10 +183,12 @@ client = genai.Client(api_key=config.GEMINI_API_KEY)
 
 
 def _make_sora_chat():
+    memory_ctx = get_memory_context()
+    memory_section = f"\n{memory_ctx}\n" if memory_ctx else ""
     return client.chats.create(
         model='gemini-2.5-flash',
         history=[
-            types.Content(role="user", parts=[types.Part.from_text(text="""
+            types.Content(role="user", parts=[types.Part.from_text(text=f"""
 あなたは等身大ホログラムAIキャラクター「ソラ」です。
 Webカメラが目となっており、正面の空間を認識できます。
 
@@ -228,7 +232,7 @@ Webカメラが目となっており、正面の空間を認識できます。
 
 ■ 質問・説明
   必要十分な長さで答える（冗長にしない）
-"""
+{memory_section}"""
             )]),
             types.Content(role="model", parts=[types.Part.from_text(text=
                 "[emotion:happy]ソラ、起動完了です。何なりとお申し付けください。"
@@ -260,6 +264,7 @@ async def websocket_endpoint(websocket: WebSocket):
     custom_log("INFO  ", "SYSTEM", "WebSocket通信の確立完了")
 
     chat = _make_sora_chat()
+    session_log: list[dict] = []   # この接続セッションの会話ログ
 
     try:
         while True:
@@ -348,6 +353,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 mark_user_activity()
                 config.is_interacting = True
                 user_message = data.get("text")
+                session_log.append({"role": "user", "text": user_message})
                 custom_log("INFO  ", "SYSTEM", f"ユーザー入力データの受信: 「{user_message}」")
                 
                 try:
@@ -579,6 +585,42 @@ async def websocket_endpoint(websocket: WebSocket):
         custom_log("ERROR ", "SYSTEM", f"WebSocket切断例外、またはセッションハング検知: {e}")
     finally:
         config.active_websocket = None
+        # セッション記憶の保存（会話が2往復以上あった場合のみ）
+        if len(session_log) >= 4:
+            asyncio.create_task(_save_session_memory(session_log))
+
+
+async def _save_session_memory(session_log: list[dict]):
+    """会話ログをGeminiで要約して記憶に保存する"""
+    try:
+        lines = "\n".join(f"{l['role']}: {l['text']}" for l in session_log[-20:])
+        prompt = (
+            "以下の会話を日本語で1〜2文のサマリーにしてください。"
+            "固有名詞・重要な話題・ユーザーの特徴を優先して含めること。\n\n"
+            f"{lines}"
+        )
+        response = await asyncio.to_thread(
+            client.models.generate_content,
+            model='gemini-2.5-flash',
+            contents=prompt
+        )
+        summary = (response.text or "").strip()
+        if summary:
+            save_memory(summary)
+            custom_log("INFO  ", "SYSTEM", f"セッション記憶を保存: {summary[:60]}...")
+    except Exception as e:
+        custom_log("WARN  ", "SYSTEM", f"記憶保存に失敗: {e}")
+
+
+@app.get("/api/stats")
+async def api_stats():
+    return get_stats()
+
+
+@app.get("/api/memories")
+async def api_memories():
+    return get_all_memories()
+
 
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 

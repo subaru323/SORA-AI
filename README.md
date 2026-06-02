@@ -1,145 +1,226 @@
-﻿# Pepper's Ghost Avatar (開発版)
+# SORA // NEXUS
 
-FastAPI バックエンドと Three.js + VRM フロントエンドを組み合わせた、対話型アバターシステムです。  
-Gemini (`gemini-2.5-flash`) で会話生成し、`edge-tts` で音声合成を行います。
+> **等身大ホログラムAIキャラクター「ソラ」**  
+> ペッパーズゴースト投影 × Gemini AI × リアルタイムVRMアバター
 
-## 現在の実装ステータス（2026-05-23時点）
+---
 
-### 1. 会話入力
-- Web Speech API による音声入力
-- 画面下のテキスト入力フォームによる入力
+## 概要
 
-### 2. 会話応答
-- Gemini による会話生成
-- 感情タグ（`[emotion:...]`）に応じたモーション再生
-- edge-tts による音声再生
+SORA // NEXUS は、ペッパーズゴースト（ハーフミラー）を用いた等身大ホログラム投影システムに、  
+GoogleのGemini AIを組み込んだ自律型AIエージェントです。
 
-### 3. カメラ連携
-- OpenCV / MediaPipe による人物・物体検知
-- プレビュー画像をWebSocketでフロントへ配信
-- 一定条件での自発話（独り言）
-- 会話中の割り込み抑制（アイドル猶予 + クールダウン）
+Webカメラを「目」として空間を認識し、来場者に自発的に話しかけ、会話・ゲーム・システム操作を  
+文脈に応じて自律実行します。単なる応答ボットではなく、**空間を認識し能動的に関わるエージェント**として機能します。
 
-### 4. Visionオンデマンド再生成（新規）
-- まず通常応答（テキスト）で処理
-- 必要時のみ `vision` 判定でカメラ画像参照を要求
-- 要求時だけ最新カメラフレームを Gemini へ渡し、再生成して回答
+---
 
-### 5. オプションUI
-- `Esc` でシステムオプション表示
-- カメラ切替（動的列挙）
-- ミラー表示
-- TTS（Voice / Rate / Pitch）
-- アバター見た目（Brightness / Contrast / Saturate）
-- アバター配置（X / Y / Scale）
+## アーキテクチャ
 
-## 機能一覧（実装済み）
+```
+┌─────────────────────────────────────────────────────────┐
+│                  SORA // NEXUS  System                  │
+│                                                         │
+│  ┌──────────┐    WebSocket    ┌──────────────────────┐  │
+│  │ Browser  │◄──────────────►│   FastAPI Backend    │  │
+│  │(Three.js │                │     (app.py)         │  │
+│  │ VRM+UI)  │                │                      │  │
+│  └──────────┘                │  ┌────────────────┐  │  │
+│                              │  │  Gemini 2.5    │  │  │
+│  ┌──────────┐   Camera Feed  │  │  Flash (LLM)   │  │  │
+│  │ Web Cam  │───────────────►│  └────────────────┘  │  │
+│  └──────────┘                │  ┌────────────────┐  │  │
+│                              │  │  edge-tts(TTS) │  │  │
+│  ┌──────────┐   Hologram     │  └────────────────┘  │  │
+│  │  Mirror  │◄───────────────│  ┌────────────────┐  │  │
+│  │ Display  │                │  │ Memory/Visitor │  │  │
+│  └──────────┘                │  │   System       │  │  │
+│                              │  └────────────────┘  │  │
+│                              └──────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
+```
 
-### 音声・テキストコマンド
-- `scale`: `UP` / `DOWN`
-- `mirror`: `TOGGLE`
-- `camera`: `TOGGLE` / `INTERNAL` / `USB` / `0` `1` などID指定
-- `rate`: `FASTER` / `SLOWER`
-- `vision`: `REQUEST_FRAME`（内部制御用）
+---
 
-### UI/UX
-- 待機メッセージ（「話しかけてください」）は最新位置のみ表示
-- ソラ発話の行間を拡張（視認性改善）
+## 主な機能
 
-### ログ
-- `APP_LOG_LEVEL` でログ下限を制御（`DEBUG` / `INFO` / `WARN` / `ERROR`）
-- Vision判定結果、画像送信、Vision再生成テキストを `INFO` 出力
+### 🤖 AI会話エンジン
+- **Gemini 2.5 Flash** によるリアルタイムストリーミング応答
+- J.A.R.V.I.S.スタイルの洗練されたキャラクター人格
+- 音声入力（Web Speech API）とテキスト入力に対応
+- 感情タグ `[emotion:happy|sad|angry|surprised|neutral]` による表情自動制御
 
-## 具体的な操作例（お手本入力）
+### 🎭 ホログラムアバター
+- **VRM形式**の3Dキャラクターをリアルタイムレンダリング（Three.js + @pixiv/three-vrm）
+- 感情に連動したポーズ・表情・ライティングの自動制御
+- リップシンク（音量解析による口形制御）
+- 自動まばたき・呼吸アニメーション・パーティクルエフェクト
 
-### 起動確認
-1. ブラウザで `http://localhost:8000/` を開く
-2. `Space` で開始
-3. マイク許可を与える
+### 👁 空間認識（カメラ）
+- **MediaPipe** による顔検出・オブジェクト検出（リアルタイム）
+- 距離判定（至近距離 / 適正距離 / 遠距離）
+- 持ち物認識（バックパック・スマートフォン・傘など20種類）
+- **顔ハッシュによるリピーター認識**（追加ライブラリ不要）
 
-### 会話確認
-- お手本入力: `今日はどんなことができる？`
-- 期待動作: ソラが短文で返答し、音声再生される
+### 🧠 記憶システム
+- 会話終了時にGeminiが自動でサマリーを生成・保存
+- 次回起動時にシステムプロンプトへ注入し「前回の話」を覚えた状態で起動
+- 最大50件の会話記憶を `data/memories.json` に永続化
 
-### スケール変更
-- お手本入力: `アバターを少し大きくして`
-- 期待動作: `scale=UP` が実行され、アバターが拡大
+### 📊 来場者ダッシュボード
+- `http://localhost:8000/dashboard` でアクセス
+- 累計・本日のユニーク来場者数、来場回数ランキング
+- 会話記憶一覧、直近の来場ログ（30秒ごとに自動更新）
 
-### カメラ切替（名称）
-- お手本入力: `USBカメラに切り替えて`
-- 期待動作: `camera=USB` が実行され、該当カメラへ切替
+### 🎮 コマンドシステム
+ソラ自身が応答の中にコマンドタグを埋め込み、UIを自律制御します。
 
-### カメラ切替（ID）
-- お手本入力: `カメラ1にして`
-- 期待動作: `camera=1` が実行され、ID1へ切替
+| コマンド | 機能 |
+|---|---|
+| `[command:scale=UP/DOWN]` | アバターサイズ変更 |
+| `[command:mirror=TOGGLE]` | 画面左右反転 |
+| `[command:camera=TOGGLE/INTERNAL/USB]` | カメラ切替 |
+| `[command:rate=FASTER/SLOWER]` | 話速変更 |
+| `[command:volume=UP/DOWN]` | 音量変更 |
+| `[command:color=WARM/COOL/NORMAL]` | カラーフィルター |
+| `[command:game=START/END]` | ゲームモード制御 |
+| `[command:history=RESET]` | 会話履歴リセット |
 
-### ミラー切替
-- お手本入力: `左右反転を切り替えて`
-- 期待動作: `mirror=TOGGLE` が実行される
+---
 
-### 話速変更
-- お手本入力: `もう少し早口で`
-- 期待動作: `rate=FASTER` が実行される
+## 技術スタック
 
-### Visionオンデマンド確認（OBS仮想カメラ利用可）
-- 例: OBS Virtual Camera を選択し、アバター画面を映す
-- お手本入力: `今の見た目、どう見えてる？`
-- 期待動作:
-  - Vision判定ログが出る
-  - 必要時にカメラ画像をGeminiへ送信
-  - 画像文脈を使った再生成回答を返す
+| カテゴリ | 技術 |
+|---|---|
+| **バックエンド** | Python 3.11+ / FastAPI / WebSocket |
+| **AI** | Google Gemini 2.5 Flash |
+| **音声合成** | edge-tts（Microsoft Edge TTS） |
+| **音声認識** | Web Speech API |
+| **3Dレンダリング** | Three.js / @pixiv/three-vrm |
+| **エッジAI** | MediaPipe (顔検出・物体検出) |
+| **フロントエンド** | Vanilla JS / CSS Custom Properties |
+| **データ保存** | JSON ファイル（記憶・来場者DB） |
+| **投影方式** | ペッパーズゴースト（ハーフミラー） |
+
+---
+
+## ファイル構成
+
+```
+SORA-AI/
+├── app.py              # FastAPIメインサーバー・WebSocketハンドラ
+├── camera.py           # カメラセンサー・空間認識・来場者認識
+├── config.py           # グローバル設定・状態管理
+├── memory.py           # 会話記憶の保存・読み込み・プロンプト注入
+├── visitors.py         # 来場者認識・来場ログ・ダッシュボード統計
+├── requirements.txt    # Pythonパッケージ一覧
+├── .env                # APIキー（Gitignore対象）
+├── data/               # 永続化データ（自動生成）
+│   ├── memories.json   # 会話サマリー記録
+│   ├── visitors.json   # 来場者プロファイル
+│   └── visit_log.json  # 来場ログ
+└── static/
+    ├── index.html          # メインUI
+    ├── style.css           # SORA // NEXUS デザインシステム
+    ├── main.js             # フロントエンドロジック
+    ├── avatar.js           # VRMアバター制御（Three.js）
+    └── dashboard.html      # 来場者分析ダッシュボード
+```
+
+---
 
 ## セットアップ
 
-### 1) 仮想環境
-```powershell
-python -m venv venv
-venv\Scripts\Activate.ps1
-```
+### 必要環境
+- Python 3.11以上
+- Webカメラ（USB / 内蔵）
+- Gemini API キー（[Google AI Studio](https://aistudio.google.com/) で無料取得可）
 
-### 2) 依存インストール
-```powershell
+### 1. インストール
+
+```bash
+git clone https://github.com/subaru323/SORA-AI.git
+cd SORA-AI
+
+python -m venv venv
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # Mac/Linux
+
 pip install -r requirements.txt
 ```
 
-### 3) 環境変数
-```powershell
-$env:GEMINI_API_KEY="<YOUR_API_KEY>"
-# 任意: ログ下限（未指定時は INFO）
-$env:APP_LOG_LEVEL="INFO"
+### 2. APIキー設定
+
+`.env` ファイルをプロジェクトルートに作成：
+
+```env
+GEMINI_API_KEY=あなたのGeminiAPIキー
 ```
 
-## 起動
+### 3. 起動
 
-```powershell
+```bash
 python app.py
 ```
 
-ブラウザ:
+ブラウザで `http://localhost:8000` にアクセス。
 
-```text
-http://localhost:8000/
+---
+
+## 使い方
+
+### 基本操作
+
+| 操作 | 方法 |
+|---|---|
+| システム起動 | 「▶ SYSTEM BOOT」ボタン or スペースキー |
+| 音声入力 | 起動後に話しかける（自動でマイクON） |
+| テキスト入力 | 画面下部のフォームから送信 |
+| 設定画面 | ESCキー |
+| クイック設定 | ステータスバー右端の ⚙ ボタン |
+| ダッシュボード | `localhost:8000/dashboard` |
+
+### 会話例
+
+```
+あなた：「大きくなって」
+ソラ  ：「承知しました。[command:scale=UP] サイズを調整いたします。」
+→ アバターが拡大
+
+あなた：「しりとりしよう」
+ソラ  ：「[emotion:happy][command:game=START] では参りましょう。りんご。」
+→ ゲームバッジが表示され、ルール維持で進行
+
+あなた：（翌日）「こんにちは」
+ソラ  ：「昨日はAIの話をしましたね。承知しております。」
+→ 前回の会話記憶を参照
 ```
 
-## ディレクトリ構成
+---
 
-```text
-peppers_ghost_avator/
-├─ app.py                 # FastAPI + WebSocket + Gemini連携（会話/Vision判定）
-├─ camera.py              # カメラ処理・検知・プレビュー/最新フレーム共有
-├─ config.py              # 設定/共有状態
-├─ requirements.txt       # Python依存
-├─ static/
-│  ├─ index.html          # UI本体
-│  ├─ main.js             # 音声入力・WebSocket・UIイベント
-│  ├─ avatar.js           # Three.js / VRM描画・モーション
-│  ├─ style.css           # スタイル
-│  └─ *.vrm               # アバターモデル
-└─ README.md
-```
+## ペッパーズゴースト設定
 
-## 既知の制約
+1. モニターを垂直に設置
+2. 45°に傾けたハーフミラーをモニター前面に配置
+3. ブラウザを全画面表示（F11）
+4. ⚙ → **Mirror ON** を確認
+5. 設定画面（ESC）のスライダーでアバター位置・サイズを微調整
 
-- 音声/テキストコマンドでの VRM 位置（X/Y）変更は未実装（UIスライダーのみ）
-- `enumerateDevices()` の順序と OpenCV カメラインデックスは環境により一致しない場合がある
-- Vision再生成は最新フレーム未取得時にテキスト応答へフォールバック
+---
+
+## 環境変数
+
+| 変数名 | 説明 | デフォルト |
+|---|---|---|
+| `GEMINI_API_KEY` | Gemini API キー | 必須 |
+| `APP_LOG_LEVEL` | ログレベル（DEBUG/INFO/WARN/ERROR） | `INFO` |
+
+---
+
+## ライセンス
+
+MIT License
+
+---
+
+*Powered by Google Gemini / Three.js / MediaPipe / edge-tts*

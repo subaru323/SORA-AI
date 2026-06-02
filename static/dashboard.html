@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SORA // ANALYTICS</title>
+<style>
+:root {
+    --ec: #00ffcc;
+    --ec-rgb: 0,255,204;
+    --bg: #000000;
+    --bg2: #020d0b;
+    --text: #e0fff8;
+    --text2: #5ab8a0;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+}
+
+/* ── Header ── */
+#header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 32px;
+    background: rgba(0,0,0,0.7);
+    border-bottom: 1px solid rgba(var(--ec-rgb),0.2);
+}
+#header h1 {
+    color: var(--ec);
+    font-size: 22px;
+    letter-spacing: 0.12em;
+}
+#header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 13px;
+    color: var(--text2);
+}
+#last-updated { font-size: 12px; }
+#refresh-btn {
+    background: transparent;
+    border: 1px solid rgba(var(--ec-rgb),0.4);
+    color: var(--ec);
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 13px;
+    transition: background 0.15s;
+}
+#refresh-btn:hover { background: rgba(var(--ec-rgb),0.1); }
+
+/* ── Layout ── */
+#main {
+    padding: 28px 32px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* ── Stat Cards ── */
+#stat-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+}
+@media (max-width: 800px) { #stat-cards { grid-template-columns: repeat(2,1fr); } }
+
+.stat-card {
+    background: rgba(var(--ec-rgb),0.04);
+    border: 1px solid rgba(var(--ec-rgb),0.15);
+    border-radius: 8px;
+    padding: 20px 22px;
+    position: relative;
+    overflow: hidden;
+}
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: var(--ec);
+    opacity: 0.6;
+}
+.stat-label {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--text2);
+    margin-bottom: 10px;
+}
+.stat-value {
+    font-size: 40px;
+    font-weight: bold;
+    color: var(--ec);
+    line-height: 1;
+}
+.stat-sub {
+    font-size: 12px;
+    color: var(--text2);
+    margin-top: 6px;
+    opacity: 0.7;
+}
+
+/* ── Grid Layout ── */
+#grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+@media (max-width: 900px) { #grid { grid-template-columns: 1fr; } }
+
+.panel {
+    background: rgba(var(--ec-rgb),0.025);
+    border: 1px solid rgba(var(--ec-rgb),0.12);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(var(--ec-rgb),0.1);
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    color: var(--ec);
+}
+.panel-body { padding: 16px 18px; }
+
+/* ── Table ── */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+th {
+    text-align: left;
+    color: var(--text2);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    padding: 0 0 10px;
+    border-bottom: 1px solid rgba(var(--ec-rgb),0.1);
+}
+td {
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(var(--ec-rgb),0.05);
+    color: var(--text);
+    font-size: 13px;
+}
+tr:last-child td { border-bottom: none; }
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    background: rgba(var(--ec-rgb),0.1);
+    color: var(--ec);
+    border: 1px solid rgba(var(--ec-rgb),0.3);
+}
+.badge.new {
+    background: rgba(255,200,0,0.1);
+    color: #ffdd44;
+    border-color: rgba(255,200,0,0.3);
+}
+
+/* ── Memory Panel ── */
+.memory-item {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(var(--ec-rgb),0.06);
+    font-size: 13px;
+    line-height: 1.6;
+}
+.memory-item:last-child { border-bottom: none; }
+.memory-date {
+    font-size: 11px;
+    color: var(--text2);
+    margin-bottom: 4px;
+    letter-spacing: 0.06em;
+}
+.memory-text { color: var(--text); }
+
+/* ── Empty State ── */
+.empty {
+    text-align: center;
+    color: var(--text2);
+    padding: 32px 0;
+    font-size: 13px;
+    opacity: 0.5;
+    letter-spacing: 0.1em;
+}
+
+/* ── Loading ── */
+#loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 60vh;
+    font-size: 16px;
+    color: var(--ec);
+    letter-spacing: 0.15em;
+    animation: pulse 1.5s ease-in-out infinite alternate;
+}
+@keyframes pulse { from { opacity:0.3; } to { opacity:1.0; } }
+
+/* ── Scan line (decoration) ── */
+body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg, transparent, transparent 3px,
+        rgba(0,255,204,0.012) 3px, rgba(0,255,204,0.012) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+}
+</style>
+</head>
+<body>
+
+<div id="header">
+    <h1>// SORA ANALYTICS</h1>
+    <div id="header-right">
+        <span id="last-updated">—</span>
+        <button id="refresh-btn" onclick="loadData()">⟳ REFRESH</button>
+        <a href="/" style="color:var(--text2); text-decoration:none; font-size:13px;">← BACK</a>
+    </div>
+</div>
+
+<div id="main">
+    <div id="loading">LOADING DATA...</div>
+    <div id="content" style="display:none">
+
+        <!-- 統計カード -->
+        <div id="stat-cards">
+            <div class="stat-card">
+                <div class="stat-label">TOTAL VISITORS</div>
+                <div class="stat-value" id="s-total-uv">—</div>
+                <div class="stat-sub">ユニーク来場者数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">TODAY VISITORS</div>
+                <div class="stat-value" id="s-today-uv">—</div>
+                <div class="stat-sub">本日のユニーク来場者</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">TOTAL VISITS</div>
+                <div class="stat-value" id="s-total-v">—</div>
+                <div class="stat-sub">累計来場回数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">TODAY VISITS</div>
+                <div class="stat-value" id="s-today-v">—</div>
+                <div class="stat-sub">本日の来場回数</div>
+            </div>
+        </div>
+
+        <div id="grid">
+
+            <!-- 来場者ランキング -->
+            <div class="panel">
+                <div class="panel-header">▸ VISITOR RANKING</div>
+                <div class="panel-body">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>VISITS</th>
+                                <th>FIRST</th>
+                                <th>LAST</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="visitor-table"></tbody>
+                    </table>
+                    <div class="empty" id="visitor-empty" style="display:none">NO VISITORS YET</div>
+                </div>
+            </div>
+
+            <!-- 直近来場ログ -->
+            <div class="panel">
+                <div class="panel-header">▸ RECENT ACTIVITY</div>
+                <div class="panel-body">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>TIME</th>
+                                <th>VISITOR</th>
+                                <th>DURATION</th>
+                            </tr>
+                        </thead>
+                        <tbody id="log-table"></tbody>
+                    </table>
+                    <div class="empty" id="log-empty" style="display:none">NO ACTIVITY YET</div>
+                </div>
+            </div>
+
+            <!-- 会話記憶 -->
+            <div class="panel" style="grid-column: span 2">
+                <div class="panel-header">
+                    ▸ CONVERSATION MEMORY
+                    <span style="font-size:11px; color:var(--text2);" id="memory-count"></span>
+                </div>
+                <div class="panel-body" id="memory-list"></div>
+                <div class="empty" id="memory-empty" style="display:none; padding:32px;">NO MEMORIES YET</div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+async function loadData() {
+    try {
+        const [statsRes, memRes] = await Promise.all([
+            fetch('/api/stats'),
+            fetch('/api/memories'),
+        ]);
+        const stats   = await statsRes.json();
+        const memData = await memRes.json();
+        render(stats, memData);
+        document.getElementById('last-updated').textContent =
+            'Updated: ' + new Date().toLocaleTimeString('ja-JP');
+    } catch(e) {
+        document.getElementById('loading').textContent = 'ERROR: ' + e.message;
+    }
+}
+
+function render(stats, memories) {
+    document.getElementById('loading').style.display   = 'none';
+    document.getElementById('content').style.display   = 'block';
+
+    // Stat cards
+    document.getElementById('s-total-uv').textContent = stats.total_unique_visitors;
+    document.getElementById('s-today-uv').textContent = stats.today_unique_visitors;
+    document.getElementById('s-total-v').textContent  = stats.total_visits;
+    document.getElementById('s-today-v').textContent  = stats.today_visits;
+
+    // Visitor table
+    const vtbody = document.getElementById('visitor-table');
+    vtbody.innerHTML = '';
+    if (!stats.visitor_list.length) {
+        document.getElementById('visitor-empty').style.display = 'block';
+    } else {
+        stats.visitor_list.slice(0,10).forEach((v, i) => {
+            const isTop = i === 0;
+            vtbody.innerHTML += `
+            <tr>
+                <td>VISITOR-${String(v.id).padStart(3,'0')}</td>
+                <td><span class="badge">${v.visit_count} visits</span></td>
+                <td>${v.first_visit}</td>
+                <td>${v.last_visit}</td>
+                <td>${isTop ? '<span class="badge">★ TOP</span>' : ''}</td>
+            </tr>`;
+        });
+    }
+
+    // Log table
+    const ltbody = document.getElementById('log-table');
+    ltbody.innerHTML = '';
+    if (!stats.recent_logs.length) {
+        document.getElementById('log-empty').style.display = 'block';
+    } else {
+        stats.recent_logs.slice(0,15).forEach(l => {
+            const time = new Date(l.timestamp).toLocaleString('ja-JP', {
+                month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'
+            });
+            const dur = l.duration_sec > 0 ? `${l.duration_sec}s` : '—';
+            ltbody.innerHTML += `
+            <tr>
+                <td>${time}</td>
+                <td>VISITOR-${String(l.visitor_id).padStart(3,'0')}</td>
+                <td>${dur}</td>
+            </tr>`;
+        });
+    }
+
+    // Memory list
+    const mlist = document.getElementById('memory-list');
+    mlist.innerHTML = '';
+    if (!memories.length) {
+        document.getElementById('memory-empty').style.display = 'block';
+    } else {
+        document.getElementById('memory-count').textContent = `${memories.length} entries`;
+        [...memories].reverse().slice(0,20).forEach(m => {
+            mlist.innerHTML += `
+            <div class="memory-item">
+                <div class="memory-date">${m.date.slice(0,16).replace('T',' ')}</div>
+                <div class="memory-text">${m.summary}</div>
+            </div>`;
+        });
+    }
+}
+
+loadData();
+setInterval(loadData, 30000); // 30秒ごとに自動更新
+</script>
+</body>
+</html>

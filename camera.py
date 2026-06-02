@@ -11,6 +11,7 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 from google import genai
 import config
+from visitors import compute_face_hash, find_visitor, register_visitor, update_visitor, log_visit
 
 class CameraSensor:
     def __init__(self):
@@ -138,6 +139,31 @@ class CameraSensor:
 
                     objects_str = "、".join(detected_objects) if detected_objects else "特になし"
                     local_features = f"物理距離: {proximity_status} / 持ち物: [{objects_str}]"
+
+                    # ── 来場者認識 ──────────────────────────────────────
+                    visitor_info = ""
+                    try:
+                        bx, by = target_face_bbox.origin_x, target_face_bbox.origin_y
+                        bw, bh = target_face_bbox.width, target_face_bbox.height
+                        face_crop = frame[by:by+bh, bx:bx+bw]
+                        if face_crop.size > 0:
+                            face_hash = compute_face_hash(face_crop)
+                            visitor   = find_visitor(face_hash)
+                            if visitor:
+                                update_visitor(visitor["id"])
+                                vc = visitor["visit_count"]
+                                visitor_info = f" / 来訪{vc}回目のリピーター"
+                                log_visit(visitor["id"])
+                                custom_log(" INFO ", "CAMERA", f"リピーター検知: Visitor-{visitor['id']} ({vc}回目)")
+                            else:
+                                new_v = register_visitor(face_hash)
+                                log_visit(new_v["id"])
+                                visitor_info = " / 初来場"
+                                custom_log(" INFO ", "CAMERA", f"新規来場者登録: Visitor-{new_v['id']}")
+                    except Exception as ve:
+                        custom_log("WARN  ", "CAMERA", f"来場者認識エラー: {ve}")
+
+                    local_features += visitor_info
                     custom_log(" INFO ", "CAMERA", f"空間情報の変化看破 ({local_features})")
 
                     if config.main_loop:
