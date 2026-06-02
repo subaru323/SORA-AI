@@ -904,11 +904,13 @@ function setRegInstruction(text) {
 }
 
 function _syncRegPreview() {
-    // カメラプレビュー画像をコピーして登録画面にも表示
-    const src = document.getElementById('camera-preview');
-    const dst = document.getElementById('register-preview-img');
-    if (!src || !dst) return;
-    if (src.src && src.src !== dst.src) dst.src = src.src;
+    // camera-preview-canvas の内容を register-preview-canvas に複写
+    const src = document.getElementById('camera-preview-canvas');
+    const dst = document.getElementById('register-preview-canvas');
+    if (!src || !dst || src.width === 0) { setTimeout(_syncRegPreview, 100); return; }
+    dst.width  = src.width;
+    dst.height = src.height;
+    dst.getContext('2d').drawImage(src, 0, 0);
     setTimeout(_syncRegPreview, 100);
 }
 
