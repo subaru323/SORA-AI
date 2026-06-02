@@ -812,7 +812,7 @@ function animateParticles() {
         const rM = D * 0.128;  // 中間リング
         const rI = D * 0.072;  // 内リング
 
-        const ec  = getComputedStyle(document.documentElement).getPropertyValue('--ec').trim() || '#00d4ff';
+        const ec  = getComputedStyle(document.body).getPropertyValue('--ec').trim() || '#00d4ff';
         const rgb = ec.startsWith('#')
             ? `${parseInt(ec.slice(1,3),16)},${parseInt(ec.slice(3,5),16)},${parseInt(ec.slice(5,7),16)}`
             : '0,212,255';
