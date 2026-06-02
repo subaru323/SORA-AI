@@ -131,40 +131,39 @@
 </div>
 
 <!-- ══════════════ RIGHT PANEL (AVATAR) ══════════════ -->
+<!-- canvas-container : フィルター対象。THREE.js + 背景エフェクトのみ -->
 <div id="canvas-container" class="avatar-filter-target">
-
-    <!-- 背景レイヤー -->
     <div id="hex-bg"></div>
     <div id="emotion-aura"></div>
     <div id="scan-grid"></div>
     <div id="scan-line"></div>
+    <canvas id="particle-canvas"></canvas>
+</div>
 
-    <!-- JARVIS リング装飾 -->
+<!-- jarvis-overlay : フィルター対象外。リング・クロスヘア・コーナーを描画 -->
+<div id="jarvis-overlay">
+    <!-- リング -->
     <div id="av-ring-outer"></div>
     <div id="av-ring-mid"></div>
     <div id="av-ring-inner"></div>
-    <svg id="av-tick-svg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+    <!-- 目盛りSVG -->
+    <svg id="av-tick-svg" viewBox="0 0 100 100"></svg>
+    <!-- クロスヘア -->
     <div id="av-cross-h"></div>
     <div id="av-cross-v"></div>
-
-    <!-- 発話時パルスリング -->
+    <!-- 発話パルス -->
     <div id="av-pulse-1" class="av-pulse"></div>
     <div id="av-pulse-2" class="av-pulse"></div>
-
     <!-- コーナーブラケット -->
     <div class="corner tl"></div>
     <div class="corner tr"></div>
     <div class="corner bl"></div>
     <div class="corner br"></div>
-
-    <!-- コーナーアーク（四隅の扇形） -->
+    <!-- コーナーアーク -->
     <div class="av-corner-arc tl"></div>
     <div class="av-corner-arc tr"></div>
     <div class="av-corner-arc bl"></div>
     <div class="av-corner-arc br"></div>
-
-    <!-- パーティクルキャンバス -->
-    <canvas id="particle-canvas"></canvas>
 </div>
 
 <!-- ══════════════ OPTIONS OVERLAY ══════════════ -->
