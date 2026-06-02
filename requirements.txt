@@ -7,3 +7,6 @@ opencv-python-headless
 pillow
 mediapipe
 python-dotenv
+cmake
+onnxruntime
+insightface

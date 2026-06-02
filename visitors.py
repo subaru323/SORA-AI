@@ -11,40 +11,59 @@ from datetime import datetime, date
 import cv2
 import numpy as np
 
-# ── face_recognition 自動検出 ──────────────────────────────────
+# ── insightface 自動検出（優先）──────────────────────────────────
+# insightface + onnxruntime が入っていれば高精度モード（512次元ArcFace）
+# 未インストールなら 32×32 グレースケールハッシュにフォールバック
 try:
-    import face_recognition as _fr
-    FACE_REC_AVAILABLE = True
+    from insightface.app import FaceAnalysis as _FaceAnalysis
+    INSIGHT_AVAILABLE = True
 except ImportError:
-    FACE_REC_AVAILABLE = False
+    INSIGHT_AVAILABLE = False
+
+_insight_app = None   # lazy init（初回呼び出し時にモデルダウンロード）
 
 DATA_DIR       = "data"
 VISITORS_FILE  = os.path.join(DATA_DIR, "visitors.json")
 VISIT_LOG_FILE = os.path.join(DATA_DIR, "visit_log.json")
 
-HASH_SIZE  = 32
-# 類似度閾値（face_recognition は距離ベースなので 1-distance で変換）
-THRESHOLD_FR   = 0.50   # face_recognition: distance < 0.5 → 同一人物
-THRESHOLD_HASH = 0.91   # hash: cosine similarity > 0.91
+HASH_SIZE        = 32
+THRESHOLD_INSIGHT = 0.35   # insightface cosine similarity（同一人物とみなす下限）
+THRESHOLD_HASH    = 0.91   # hash cosine similarity
 
 
 def get_mode() -> str:
-    return "face_recognition" if FACE_REC_AVAILABLE else "hash"
+    return "insightface" if INSIGHT_AVAILABLE else "hash"
+
+
+def _get_insight_app():
+    global _insight_app
+    if _insight_app is None:
+        app = _FaceAnalysis(name="buffalo_sc", allowed_modules=["detection", "recognition"])
+        app.prepare(ctx_id=-1, det_size=(320, 320))   # ctx_id=-1 = CPU
+        _insight_app = app
+    return _insight_app
 
 
 # ── エンコーディング計算 ────────────────────────────────────────
 
 def compute_encoding(face_bgr: np.ndarray) -> dict | None:
-    """顔画像から特徴量を計算する（最良の方法を自動選択）"""
-    if FACE_REC_AVAILABLE:
+    """顔画像から特徴量を計算する（insightface 優先、なければハッシュ）"""
+    if INSIGHT_AVAILABLE:
         try:
-            rgb = cv2.cvtColor(face_bgr, cv2.COLOR_BGR2RGB)
-            encodings = _fr.face_encodings(rgb)
-            if encodings:
-                return {"type": "face_recognition", "data": encodings[0].tolist()}
+            app = _get_insight_app()
+            img = face_bgr.copy()
+            # insightface は最低 64x64 必要。小さければ拡大
+            h, w = img.shape[:2]
+            if h < 64 or w < 64:
+                scale = max(64 / h, 64 / w)
+                img   = cv2.resize(img, (int(w * scale), int(h * scale)))
+            faces = app.get(img)
+            if faces:
+                emb = faces[0].embedding   # 512次元 L2正規化済み
+                return {"type": "insightface", "data": emb.tolist()}
         except Exception:
             pass
-    # Fallback: グレースケールハッシュ
+    # Fallback: 32×32 グレースケールハッシュ
     try:
         gray    = cv2.cvtColor(face_bgr, cv2.COLOR_BGR2GRAY)
         resized = cv2.resize(gray, (HASH_SIZE, HASH_SIZE))
@@ -69,22 +88,20 @@ def compute_best_encoding(face_frames: list[np.ndarray]) -> dict | None:
 
 
 def _similarity(stored: dict, query: dict) -> float:
-    """2つのエンコーディング間の類似度を返す（0〜1）"""
+    """2つのエンコーディング間のコサイン類似度を返す（0〜1）"""
     if stored["type"] != query["type"]:
         return 0.0
-    if stored["type"] == "face_recognition" and FACE_REC_AVAILABLE:
-        dist = _fr.face_distance(
-            [np.array(stored["data"])], np.array(query["data"])
-        )[0]
-        return float(1.0 - dist)
-    # hash: コサイン類似度
     a = np.array(stored["data"], np.float32)
     b = np.array(query["data"],  np.float32)
+    if stored["type"] == "insightface":
+        # ArcFace 埋め込みは L2 正規化済み → ドット積 = コサイン類似度
+        return float(np.dot(a, b))
+    # hash: コサイン類似度
     return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b) + 1e-8))
 
 
 def _threshold_for(enc_type: str) -> float:
-    return THRESHOLD_FR if enc_type == "face_recognition" else THRESHOLD_HASH
+    return THRESHOLD_INSIGHT if enc_type == "insightface" else THRESHOLD_HASH
 
 
 # ── CRUD ───────────────────────────────────────────────────────
