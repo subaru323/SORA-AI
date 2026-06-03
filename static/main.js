@@ -842,11 +842,12 @@ function animateParticles() {
 
         const tSec2 = Date.now() / 1000;
 
-        // ── 1. 最外周ブロックセグメントリング（超ゆっくり正回転）
-        jBlockRing(particleCtx, cx, cy, rBlk, rgb, 40,
-                   D * 0.012, D * 0.022, 0.7, jAngle * 0.25);
-        // その内側に細い実線で縁取り
-        jRing(particleCtx, cx, cy, rBlk - D * 0.02, rgb, 1, 0.3);
+        // ── 1. 最外周ブロックセグメントリング（太いブロック・超ゆっくり正回転）
+        jBlockRing(particleCtx, cx, cy, rBlk, rgb, 36,
+                   D * 0.018, D * 0.040, 0.85, jAngle * 0.25);
+        // ブロックの内側と外側を実線で縁取り（フレーム感）
+        jRing(particleCtx, cx, cy, rBlk - D * 0.030, rgb, 1.5, 0.4);
+        jRing(particleCtx, cx, cy, rBlk + D * 0.026, rgb, 1, 0.25);
 
         // ── 2. 外リング＋72目盛り（逆回転）
         particleCtx.save();
@@ -859,7 +860,7 @@ function animateParticles() {
         jOrbitalPip(particleCtx, cx, cy, rO, rgb, jAngle * 2.0);
 
         // ── 3. 三角配置の太い弧（Iron Man 風・正回転）
-        jTriArc(particleCtx, cx, cy, rTri, rgb, D * 0.014, 0.85, jAngle * 0.7);
+        jTriArc(particleCtx, cx, cy, rTri, rgb, D * 0.020, 0.9, jAngle * 0.7);
 
         // ── 4. セグメントリング（逆回転・8分割）
         jSegRing(particleCtx, cx, cy, rS, rgb, 4, 0.85, 8, -jAngle * 1.0);

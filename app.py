@@ -730,7 +730,17 @@ async def api_memories():
     return get_all_memories()
 
 
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+class NoCacheStaticFiles(StaticFiles):
+    """開発中に古いJS/CSSがキャッシュされないようキャッシュ無効化ヘッダーを付与"""
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
+
+
+app.mount("/", NoCacheStaticFiles(directory="static", html=True), name="static")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
