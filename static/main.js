@@ -800,12 +800,16 @@ function animateParticles() {
         // 両パネル（メッセージ＋アバター）の画面全体中央
         const cx = W * 0.5;
         const cy = H * 0.52;
-        // 各リング半径を元の 40%（2/5）に縮小
-        const D  = Math.min(W, H);
-        const rO = D * 0.185;  // 外リング（目盛り）
-        const rS = D * 0.160;  // セグメントリング
-        const rM = D * 0.128;  // 中間リング
-        const rI = D * 0.072;  // 内リング
+        // リング半径（多層構造）
+        const D     = Math.min(W, H);
+        const rBlk  = D * 0.232;  // 最外周ブロックリング
+        const rO    = D * 0.198;  // 外リング（目盛り）
+        const rTri  = D * 0.170;  // 三角弧
+        const rS    = D * 0.150;  // セグメントリング
+        const rM    = D * 0.122;  // 中間リング
+        const rArc  = D * 0.094;  // 内側太弧
+        const rI    = D * 0.066;  // 内リング
+        const rCore = D * 0.030;  // 中心コア
 
         // JARVIS ブルーを軸にして感情ごとにゆっくりパルス
         // → 計算結果を --ec / --ec-rgb に書き込んでUI全体も同期させる
@@ -836,85 +840,80 @@ function animateParticles() {
         document.body.style.setProperty('--ec',     hex);
         document.body.style.setProperty('--ec-rgb', rgb);
 
-        // ── 1. 外リング＋72目盛り（正回転）
+        const tSec2 = Date.now() / 1000;
+
+        // ── 1. 最外周ブロックセグメントリング（超ゆっくり正回転）
+        jBlockRing(particleCtx, cx, cy, rBlk, rgb, 40,
+                   D * 0.012, D * 0.022, 0.7, jAngle * 0.25);
+        // その内側に細い実線で縁取り
+        jRing(particleCtx, cx, cy, rBlk - D * 0.02, rgb, 1, 0.3);
+
+        // ── 2. 外リング＋72目盛り（逆回転）
         particleCtx.save();
         particleCtx.translate(cx, cy);
-        particleCtx.rotate(jAngle * 0.8);
-        jRing(particleCtx, 0, 0, rO, rgb, 2, 0.65);
+        particleCtx.rotate(-jAngle * 0.5);
+        jRing(particleCtx, 0, 0, rO, rgb, 1.5, 0.55);
         jTicks(particleCtx, 0, 0, rO, rgb);
         particleCtx.restore();
+        // 軌道ピップ（外リング上を周回）
+        jOrbitalPip(particleCtx, cx, cy, rO, rgb, jAngle * 2.0);
 
-        // ── 2. セグメントリング（逆回転・6分割）
-        jSegRing(particleCtx, cx, cy, rS, rgb, 5, 0.9, 6, -jAngle * 1.1);
+        // ── 3. 三角配置の太い弧（Iron Man 風・正回転）
+        jTriArc(particleCtx, cx, cy, rTri, rgb, D * 0.014, 0.85, jAngle * 0.7);
 
-        // ── 3. カーディナルマーカー（セグメントリングの外側）
+        // ── 4. セグメントリング（逆回転・8分割）
+        jSegRing(particleCtx, cx, cy, rS, rgb, 4, 0.85, 8, -jAngle * 1.0);
         jCardinal(particleCtx, cx, cy, rS + 6, rgb);
 
-        // ── 4. 中間リング（多層構造でディテール強化）
-        // 4a. ベースの実線リング
-        jRing(particleCtx, cx, cy, rM, rgb, 2, 0.85);
-        // 4b. すぐ内側に細い破線リング（正回転）
+        // ── 5. 中間リング（破線＋ブラケット弧）
+        jRing(particleCtx, cx, cy, rM, rgb, 1.5, 0.7);
         particleCtx.save();
         particleCtx.translate(cx, cy);
-        jDashRing(particleCtx, 0, 0, rM - 7, rgb, 1.5, 0.55, 36, jAngle * 1.4);
+        jDashRing(particleCtx, 0, 0, rM - 6, rgb, 1.5, 0.5, 36, jAngle * 1.4);
         particleCtx.restore();
-        // 4c. 外側にブラケット弧（逆回転・四隅を囲う）
         particleCtx.save();
         particleCtx.translate(cx, cy);
-        jBracketArc(particleCtx, 0, 0, rM + 8, rgb, 2.5, 0.9,
-                    Math.PI / 5, -jAngle * 0.9 + Math.PI / 4);
+        jBracketArc(particleCtx, 0, 0, rM + 7, rgb, 2, 0.85,
+                    Math.PI / 6, -jAngle * 0.9 + Math.PI / 4);
         particleCtx.restore();
-        // 4d. スポーク（中心に向かう短い放射線・8本）
+
+        // ── 6. 内側の太い円弧×2（速い正回転・反対側）
+        jThickArc(particleCtx, cx, cy, rArc, rgb, D * 0.013, 0.9,
+                  jAngle * 1.8, Math.PI * 0.55);
+        jThickArc(particleCtx, cx, cy, rArc, rgb, D * 0.013, 0.9,
+                  jAngle * 1.8 + Math.PI, Math.PI * 0.55);
+
+        // ── 7. 内リング＋スポーク
         particleCtx.save();
         particleCtx.translate(cx, cy);
-        particleCtx.rotate(-jAngle * 0.6);
-        for (let i = 0; i < 8; i++) {
-            const a = (i * Math.PI / 4);
+        particleCtx.rotate(-jAngle * 1.2);
+        jRing(particleCtx, 0, 0, rI, rgb, 2, 0.85);
+        for (let i = 0; i < 12; i++) {
+            const a = i * Math.PI / 6;
             particleCtx.beginPath();
-            particleCtx.moveTo(Math.cos(a) * (rM - 4), Math.sin(a) * (rM - 4));
-            particleCtx.lineTo(Math.cos(a) * (rM - 13), Math.sin(a) * (rM - 13));
-            particleCtx.strokeStyle = `rgba(${rgb},${i % 2 === 0 ? 0.8 : 0.35})`;
-            particleCtx.lineWidth = i % 2 === 0 ? 2 : 1;
+            particleCtx.moveTo(Math.cos(a) * rI, Math.sin(a) * rI);
+            particleCtx.lineTo(Math.cos(a) * (rI - D * 0.018), Math.sin(a) * (rI - D * 0.018));
+            particleCtx.strokeStyle = `rgba(${rgb},${i % 3 === 0 ? 0.8 : 0.3})`;
+            particleCtx.lineWidth = i % 3 === 0 ? 2 : 1;
             particleCtx.stroke();
         }
-        // 45°位置にダイヤ型マーカー
-        [45, 135, 225, 315].forEach(deg => {
-            const a = deg * Math.PI / 180;
-            const mx = Math.cos(a) * rM, my = Math.sin(a) * rM;
-            particleCtx.save();
-            particleCtx.translate(mx, my);
-            particleCtx.rotate(a + Math.PI / 4);
-            particleCtx.fillStyle = `rgba(${rgb},1)`;
-            particleCtx.shadowColor = `rgba(${rgb},1)`;
-            particleCtx.shadowBlur = 12;
-            particleCtx.fillRect(-3, -3, 6, 6);
-            particleCtx.restore();
-            particleCtx.shadowBlur = 0;
-        });
         particleCtx.restore();
 
-        // ── 5. 内リング（強グロー）
-        jRing(particleCtx, cx, cy, rI, rgb, 3.5, 1.0);
-        jRing(particleCtx, cx, cy, rI * 0.68, rgb, 1.5, 0.45);
+        // ── 8. 中心コア（同心円＋脈動する光点）
+        jCore(particleCtx, cx, cy, rCore, rgb, tSec2);
 
-        // ── 6. 軌道ピップ（外リング上を一周）
-        jOrbitalPip(particleCtx, cx, cy, rO, rgb, jAngle * 2.2);
-
-        // ── 7. クロスヘア
+        // ── 9. クロスヘア＋コーナー
         jCross(particleCtx, cx, cy, W, H, rgb);
-
-        // ── 8. コーナーブラケット
         jCorners(particleCtx, W, H, rgb, 36);
 
-        // ── 9. 発話パルス（同心円が外に広がる）
+        // ── 10. 発話パルス（同心円が外に広がる）
         if (window.isSpeaking) {
             const t = Date.now() / 1000;
             [0, 0.55, 1.1].forEach(off => {
                 const prog = ((t + off) % 1.8) / 1.8;
-                const pr   = rI + (rO - rI) * prog;
                 particleCtx.beginPath();
-                particleCtx.arc(cx, cy, rI + (rO - rI) * prog, 0, Math.PI*2);
-                particleCtx.strokeStyle = `rgba(${rgb},${0.7*(1-prog)})`;
+                particleCtx.arc(cx, cy, rCore + (rBlk - rCore) * prog, 0, Math.PI*2);
+                particleCtx.strokeStyle = `rgba(${rgb},${0.6*(1-prog)})`;
                 particleCtx.lineWidth = 2.5;
                 particleCtx.stroke();
             });
@@ -1126,6 +1125,80 @@ function jBracketArc(ctx, x, y, r, color, lw, alpha, span, rotation) {
             ctx.fill();
         });
     }
+}
+
+/** 太い角ブロックのセグメントリング（S.H.I.E.L.D OS 風） */
+function jBlockRing(ctx, x, y, r, color, count, blockW, blockH, alpha, rotation) {
+    for (let i = 0; i < count; i++) {
+        const a = rotation + (Math.PI * 2 / count) * i;
+        // 一部のブロックだけ明るく（データ表示風）
+        const lit = (i % 5 === 0);
+        const op  = lit ? alpha : alpha * 0.35;
+        ctx.save();
+        ctx.translate(x + Math.cos(a) * r, y + Math.sin(a) * r);
+        ctx.rotate(a + Math.PI / 2);
+        ctx.fillStyle = `rgba(${color},${op})`;
+        if (lit) { ctx.shadowColor = `rgba(${color},1)`; ctx.shadowBlur = 10; }
+        ctx.fillRect(-blockW / 2, -blockH / 2, blockW, blockH);
+        ctx.restore();
+        ctx.shadowBlur = 0;
+    }
+}
+
+/** 太い円弧（部分弧・両端テーパー風キャップ） */
+function jThickArc(ctx, x, y, r, color, lw, alpha, start, arcLen) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, start, start + arcLen);
+    ctx.strokeStyle = `rgba(${color},${alpha})`;
+    ctx.lineWidth = lw;
+    ctx.lineCap = 'round';
+    ctx.shadowColor = `rgba(${color},1)`;
+    ctx.shadowBlur = 16;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.lineCap = 'butt';
+}
+
+/** 三角配置の太い弧×3（Iron Man 風） */
+function jTriArc(ctx, x, y, r, color, lw, alpha, rotation) {
+    const span = Math.PI * 2 / 3 * 0.72;   // 各弧の長さ（隙間を残す）
+    for (let i = 0; i < 3; i++) {
+        const start = rotation + (Math.PI * 2 / 3) * i;
+        jThickArc(ctx, x, y, r, color, lw, alpha, start, span);
+    }
+}
+
+/** 中心コア（同心円＋脈動する光点） */
+function jCore(ctx, cx, cy, r, color, tSec) {
+    // 外側の薄いハロー
+    const pulse = 0.5 + 0.5 * Math.sin(tSec * 2);
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 2.2);
+    grad.addColorStop(0,   `rgba(${color},${0.35 * pulse + 0.15})`);
+    grad.addColorStop(0.5, `rgba(${color},0.08)`);
+    grad.addColorStop(1,   `rgba(${color},0)`);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 2.2, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    // 同心円3枚
+    [r, r * 0.66, r * 0.33].forEach((rr, idx) => {
+        ctx.beginPath();
+        ctx.arc(cx, cy, rr, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${color},${0.5 + idx * 0.2})`;
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = `rgba(${color},1)`;
+        ctx.shadowBlur = 10;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+    });
+    // 中心の光点
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.16 + pulse * 2, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${color},1)`;
+    ctx.shadowColor = `rgba(${color},1)`;
+    ctx.shadowBlur = 20;
+    ctx.fill();
+    ctx.shadowBlur = 0;
 }
 
 /** 目盛りリング */
