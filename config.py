@@ -5,6 +5,8 @@ import asyncio
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 DETECTION_COOLDOWN_SEC = 40
 AUTO_GREETING_IDLE_GRACE_SEC = 8
+# 顔がこの秒数連続で消えたら「退室」とみなし、再来時に再挨拶を許可する
+PRESENCE_RESET_SEC = 4.0
 
 # --- グローバル状態（スレッド安全・非同期対応） ---
 active_websocket = None

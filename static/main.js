@@ -850,19 +850,46 @@ function animateParticles() {
         // ── 3. カーディナルマーカー（セグメントリングの外側）
         jCardinal(particleCtx, cx, cy, rS + 6, rgb);
 
-        // ── 4. 中間リング（逆回転）
+        // ── 4. 中間リング（多層構造でディテール強化）
+        // 4a. ベースの実線リング
+        jRing(particleCtx, cx, cy, rM, rgb, 2, 0.85);
+        // 4b. すぐ内側に細い破線リング（正回転）
+        particleCtx.save();
+        particleCtx.translate(cx, cy);
+        jDashRing(particleCtx, 0, 0, rM - 7, rgb, 1.5, 0.55, 36, jAngle * 1.4);
+        particleCtx.restore();
+        // 4c. 外側にブラケット弧（逆回転・四隅を囲う）
+        particleCtx.save();
+        particleCtx.translate(cx, cy);
+        jBracketArc(particleCtx, 0, 0, rM + 8, rgb, 2.5, 0.9,
+                    Math.PI / 5, -jAngle * 0.9 + Math.PI / 4);
+        particleCtx.restore();
+        // 4d. スポーク（中心に向かう短い放射線・8本）
         particleCtx.save();
         particleCtx.translate(cx, cy);
         particleCtx.rotate(-jAngle * 0.6);
-        jRing(particleCtx, 0, 0, rM, rgb, 2.5, 0.8);
-        // 45°に小マーカー
-        [45,135,225,315].forEach(deg => {
-            const a = deg * Math.PI / 180;
+        for (let i = 0; i < 8; i++) {
+            const a = (i * Math.PI / 4);
             particleCtx.beginPath();
-            particleCtx.arc(Math.cos(a)*rM, Math.sin(a)*rM, 4, 0, Math.PI*2);
+            particleCtx.moveTo(Math.cos(a) * (rM - 4), Math.sin(a) * (rM - 4));
+            particleCtx.lineTo(Math.cos(a) * (rM - 13), Math.sin(a) * (rM - 13));
+            particleCtx.strokeStyle = `rgba(${rgb},${i % 2 === 0 ? 0.8 : 0.35})`;
+            particleCtx.lineWidth = i % 2 === 0 ? 2 : 1;
+            particleCtx.stroke();
+        }
+        // 45°位置にダイヤ型マーカー
+        [45, 135, 225, 315].forEach(deg => {
+            const a = deg * Math.PI / 180;
+            const mx = Math.cos(a) * rM, my = Math.sin(a) * rM;
+            particleCtx.save();
+            particleCtx.translate(mx, my);
+            particleCtx.rotate(a + Math.PI / 4);
             particleCtx.fillStyle = `rgba(${rgb},1)`;
-            particleCtx.shadowColor = `rgba(${rgb},1)`; particleCtx.shadowBlur = 10;
-            particleCtx.fill(); particleCtx.shadowBlur = 0;
+            particleCtx.shadowColor = `rgba(${rgb},1)`;
+            particleCtx.shadowBlur = 12;
+            particleCtx.fillRect(-3, -3, 6, 6);
+            particleCtx.restore();
+            particleCtx.shadowBlur = 0;
         });
         particleCtx.restore();
 
@@ -1063,6 +1090,41 @@ function jSegRing(ctx, x, y, r, color, lw, alpha, segs, rotation) {
         ctx.shadowBlur = 14;
         ctx.stroke();
         ctx.shadowBlur = 0;
+    }
+}
+
+/** 破線（点線）リング */
+function jDashRing(ctx, x, y, r, color, lw, alpha, dashes, rotation) {
+    const onArc = (Math.PI * 2 / dashes) * 0.5;  // 50%デューティ
+    for (let i = 0; i < dashes; i++) {
+        const start = rotation + (Math.PI * 2 / dashes) * i;
+        ctx.beginPath();
+        ctx.arc(x, y, r, start, start + onArc);
+        ctx.strokeStyle = `rgba(${color},${alpha})`;
+        ctx.lineWidth = lw;
+        ctx.stroke();
+    }
+}
+
+/** ブラケット弧（90度ごとに四隅の短い弧で囲う） */
+function jBracketArc(ctx, x, y, r, color, lw, alpha, span, rotation) {
+    for (let i = 0; i < 4; i++) {
+        const center = rotation + i * (Math.PI / 2);
+        ctx.beginPath();
+        ctx.arc(x, y, r, center - span / 2, center + span / 2);
+        ctx.strokeStyle = `rgba(${color},${alpha})`;
+        ctx.lineWidth = lw;
+        ctx.shadowColor = `rgba(${color},1)`;
+        ctx.shadowBlur = 12;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        // 弧の両端に小さなキャップ
+        [center - span / 2, center + span / 2].forEach(a => {
+            ctx.beginPath();
+            ctx.arc(x + Math.cos(a) * r, y + Math.sin(a) * r, lw * 0.9, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(${color},${alpha})`;
+            ctx.fill();
+        });
     }
 }
 

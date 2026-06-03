@@ -65,6 +65,8 @@ class CameraSensor:
         consecutive_face_frames = 0
         _prev_face_count   = -1   # 前フレームの顔数（変化検知用）
         _last_status_send  = 0.0  # 最後にvisitor_statusを送った時刻
+        last_face_seen_time = 0.0       # 最後に顔を検知した時刻
+        greeted_this_presence = False   # 現在の在室セッション中に挨拶済みか
 
         while self.running:
             if config.is_interacting and not config.registration_mode:
@@ -87,16 +89,18 @@ class CameraSensor:
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
             face_result = self.detector_face.detect(mp_image)
-            
+
+            now = time.monotonic()
             target_face_bbox = None
             proximity_status = "適正距離"
 
             if face_result.detections:
                 consecutive_face_frames += 1
+                last_face_seen_time = now
                 first_face = face_result.detections[0]
                 bbox = first_face.bounding_box
                 target_face_bbox = bbox
-                
+
                 cv2.rectangle(preview_frame, (bbox.origin_x, bbox.origin_y), (bbox.origin_x + bbox.width, bbox.origin_y + bbox.height), (0, 255, 204), 2)
 
                 face_ratio = bbox.width / w
@@ -106,6 +110,10 @@ class CameraSensor:
                     proximity_status = "遠距離（遠方視線検知）"
             else:
                 consecutive_face_frames = max(0, consecutive_face_frames - 1)
+                # 一定時間顔が消えたら「退室」とみなし在室セッションをリセット
+                if greeted_this_presence and (now - last_face_seen_time > config.PRESENCE_RESET_SEC):
+                    greeted_this_presence = False
+                    custom_log(" INFO ", "CAMERA", "在室セッション終了・再来時の挨拶を再許可")
 
             if config.active_websocket and config.main_loop:
                 preview_count += 1
@@ -122,13 +130,14 @@ class CameraSensor:
                     except Exception:
                         pass
 
-            now = time.monotonic()
             is_after_cooldown = now - config.last_greeting_time > config.DETECTION_COOLDOWN_SEC
             is_user_idle_enough = now - config.last_user_activity_time > config.AUTO_GREETING_IDLE_GRACE_SEC
-            if consecutive_face_frames >= 3 and is_after_cooldown and is_user_idle_enough:
+            # 在室中に一度挨拶したら、退室するまで再挨拶しない
+            if consecutive_face_frames >= 3 and is_after_cooldown and is_user_idle_enough and not greeted_this_presence:
                 if target_face_bbox is not None:
                     config.last_greeting_time = now
                     consecutive_face_frames = 0
+                    greeted_this_presence = True
 
                     obj_result = self.detector_obj.detect(mp_image)
                     detected_objects = set()
@@ -188,10 +197,9 @@ class CameraSensor:
             # 顔検知数をconfigに反映し、変化があればWSへ通知
             face_count_now = len(face_result.detections) if face_result.detections else 0
             config.current_face_count = face_count_now
-            now_t = time.monotonic()
-            if (face_count_now != _prev_face_count or now_t - _last_status_send > 10):
+            if (face_count_now != _prev_face_count or now - _last_status_send > 10):
                 _prev_face_count  = face_count_now
-                _last_status_send = now_t
+                _last_status_send = now
                 if config.active_websocket and config.main_loop:
                     asyncio.run_coroutine_threadsafe(
                         config.active_websocket.send_json({
