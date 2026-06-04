@@ -20,6 +20,18 @@ registration_mode = False          # 顔登録シーケンス中は True
 registration_frame_buffer: list = []  # 登録用フレームバッファ
 today_detected_count = 0   # 今日検知したユニーク人数（カメラスレッドが更新）
 current_face_count   = 0   # 現在フレームで検知中の顔の数
+
+# --- Ollama フォールバック ---
+OLLAMA_URL   = os.getenv("OLLAMA_URL",   "http://localhost:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma3:4b")
+use_ollama_fallback = False  # 429等でOllamaに切り替わった場合True
+
+# --- リモートコントロール ---
+remote_websockets: list = []  # 接続中のリモコン WebSocket クライアント
+
+# --- ジェスチャー ---
+last_gesture_time = 0.0       # 最後にジェスチャー検知した時刻
+GESTURE_COOLDOWN_SEC = 12.0   # 同一ジェスチャーの最小間隔
 last_user_activity_time = 0
 latest_camera_frame_b64 = None
 latest_camera_frame_ts = 0

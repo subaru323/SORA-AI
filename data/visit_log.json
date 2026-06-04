@@ -1,0 +1,734 @@
+[
+  {
+    "visitor_id": 1,
+    "timestamp": "2026-06-02T11:52:48.857268",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 1,
+    "timestamp": "2026-06-02T11:58:49.642721",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 1,
+    "timestamp": "2026-06-02T11:59:28.700994",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T12:23:06.195492",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T12:31:04.697515",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T12:31:43.644357",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T12:49:25.900662",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T12:50:06.167406",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T12:50:46.049217",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T12:51:26.414448",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T12:52:06.620782",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T12:52:46.409326",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T12:53:26.214424",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T12:54:12.953515",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T12:54:53.038385",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T12:55:33.189677",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T12:56:13.180568",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T12:56:54.605496",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T12:57:33.578319",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:01:22.767418",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:02:02.397977",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:02:42.560953",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:03:22.672916",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:04:02.613497",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:04:42.432254",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 1,
+    "timestamp": "2026-06-02T13:05:22.555616",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:06:02.911418",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:06:42.908992",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:07:22.711648",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:08:02.889183",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:08:43.709653",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:09:23.211783",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:10:03.040703",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:10:42.859809",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:24:38.330147",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:25:18.222214",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:25:58.340224",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:26:38.265998",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:27:18.462627",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:27:58.251227",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:28:38.287976",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:29:18.315373",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:29:58.325727",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:30:38.516003",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:31:18.454492",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:40:45.996011",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:41:33.234380",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:42:13.250852",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 3,
+    "timestamp": "2026-06-02T13:42:54.251371",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:43:34.256145",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:44:14.363434",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:55:17.218661",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:55:57.539476",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:56:37.416464",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:57:18.254593",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:57:57.905684",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:58:37.650480",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:59:17.760100",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T13:59:58.483439",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:00:37.623377",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:01:17.772161",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:01:57.771888",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:02:37.942744",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:03:19.188899",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 1,
+    "timestamp": "2026-06-02T14:03:58.443178",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:04:38.384476",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:05:18.518508",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:05:58.561508",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:06:43.294280",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:07:23.164011",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:08:02.897388",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:08:43.182214",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:12:10.944247",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:12:49.061609",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:13:28.511127",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:14:58.483368",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:15:38.560245",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:16:18.624723",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:17:05.953040",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:17:46.213238",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:18:26.096229",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:19:06.406223",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:19:46.154898",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:20:25.894635",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:22:10.061916",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:22:50.175613",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:30:46.856696",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:31:26.989557",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:32:07.212182",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:32:47.042872",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:33:27.040291",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:34:07.112653",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:34:47.217687",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:35:27.182423",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:36:07.213182",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 4,
+    "timestamp": "2026-06-02T14:36:47.218464",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 4,
+    "timestamp": "2026-06-02T14:37:27.240068",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 4,
+    "timestamp": "2026-06-02T14:38:07.267924",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:38:47.374102",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:39:27.464328",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:40:07.491482",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:40:47.336135",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:41:27.454379",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:42:07.546029",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:43:08.845545",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:45:56.350283",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:48:07.349378",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:48:47.461208",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 1,
+    "timestamp": "2026-06-02T14:49:27.660621",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:50:07.669256",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:50:49.093997",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:51:29.129134",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:52:09.203432",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:52:48.992994",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:53:29.099827",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-02T14:54:09.257172",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-03T09:32:53.893845",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-03T09:33:20.950822",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-03T09:34:00.764397",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-03T09:34:40.801107",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-03T10:16:36.849487",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-03T10:45:19.646269",
+    "duration_sec": 0.0,
+    "topics": ""
+  }
+]

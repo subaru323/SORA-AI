@@ -39,6 +39,8 @@ import config
 from camera import CameraSensor
 from memory import get_memory_context, save_memory, get_all_memories
 from visitors import get_stats, compute_best_encoding, register_visitor_with_angles
+from timetable import get_due_announcements
+from knowledge import search as knowledge_search, summary as knowledge_summary
 
 camera_sensor = None
 LOG_LEVEL_ORDER = {"DEBUG": 10, "INFO": 20, "WARN": 30, "ERROR": 40}
@@ -174,14 +176,82 @@ async def retry_async_task(task_func, *args, max_retries=3, base_delay=1, **kwar
 async def lifespan(app: FastAPI):
     global camera_sensor
     config.main_loop = asyncio.get_running_loop()
+    # タイムテーブルスケジューラーをバックグラウンドで起動
+    asyncio.create_task(_timetable_scheduler())
     yield
     if camera_sensor:
         custom_log("INFO  ", "SYSTEM", "アプリケーション終了処理（ハードウェアリソースの解放）")
         camera_sensor.stop()
         await asyncio.sleep(0.5)
 
+
+async def _timetable_scheduler():
+    """1分ごとにタイムテーブルを確認してアナウンスを発火する"""
+    announced: set = set()
+    while True:
+        await asyncio.sleep(30)  # 30秒ごとチェック
+        try:
+            dues = get_due_announcements(announced)
+            for msg_text in dues:
+                custom_log("INFO  ", "SYSTEM", f"タイムテーブル発火: {msg_text[:40]}")
+                mp3 = await generate_cloud_audio(
+                    msg_text,
+                    config.system_settings["voice"],
+                    config.system_settings["rate"],
+                    config.system_settings["pitch"],
+                )
+                if mp3 and config.active_websocket:
+                    b64 = base64.b64encode(mp3).decode()
+                    await config.active_websocket.send_json({
+                        "type": "audio", "audio": b64,
+                        "text": msg_text, "emotion": "neutral", "command": None,
+                    })
+                    await broadcast_remote({"type": "sora_speak", "text": f"[TIMETABLE] {msg_text}"})
+        except Exception as e:
+            custom_log("WARN  ", "SYSTEM", f"タイムテーブルエラー: {e}")
+
 app = FastAPI(lifespan=lifespan)
 client = genai.Client(api_key=config.GEMINI_API_KEY)
+
+
+# ── Ollama フォールバック ──────────────────────────────────────────
+async def call_ollama(messages: list[dict], max_tokens: int = 1024) -> str:
+    """Ollama API を呼び出してテキスト応答を返す（非ストリーミング）"""
+    import httpx
+    payload = {
+        "model":    config.OLLAMA_MODEL,
+        "messages": messages,
+        "stream":   False,
+        "options":  {"num_predict": max_tokens},
+    }
+    try:
+        async with httpx.AsyncClient(timeout=60) as c:
+            r = await c.post(f"{config.OLLAMA_URL}/api/chat", json=payload)
+            r.raise_for_status()
+            return r.json()["message"]["content"]
+    except Exception as e:
+        raise RuntimeError(f"Ollama呼び出し失敗: {e}")
+
+
+def _build_ollama_history(system_prompt: str, session_log: list[dict]) -> list[dict]:
+    """session_log から Ollama 用 messages リストを構築する"""
+    msgs = [{"role": "system", "content": system_prompt}]
+    for entry in session_log[-20:]:  # 直近20件のみ
+        role = "user" if entry["role"] == "user" else "assistant"
+        msgs.append({"role": role, "content": entry.get("text", "")})
+    return msgs
+
+
+# ── リモコン: 全接続クライアントにブロードキャスト ───────────────
+async def broadcast_remote(message: dict):
+    for ws in config.remote_websockets[:]:
+        try:
+            await ws.send_json(message)
+        except Exception:
+            try:
+                config.remote_websockets.remove(ws)
+            except ValueError:
+                pass
 
 
 def _make_sora_chat():
@@ -260,6 +330,62 @@ async def generate_cloud_audio(text: str, voice: str, rate: str, pitch: str) -> 
         custom_log("ERROR ", "SYSTEM", f"音声合成（edge-tts）の完全失敗: {e}")
         return b""
 
+@app.websocket("/ws/remote")
+async def remote_ws_endpoint(websocket: WebSocket):
+    """オペレーター用リモコン WebSocket"""
+    await websocket.accept()
+    config.remote_websockets.append(websocket)
+    custom_log("INFO  ", "SYSTEM", "リモコン接続")
+    try:
+        while True:
+            data = await websocket.receive_json()
+            t = data.get("type")
+            if t == "remote_speak" and config.active_websocket:
+                # テキストをユーザー入力として SORA に渡す
+                await config.active_websocket.send_json({"type": "text", "text": data.get("text", "")})
+                await broadcast_remote({"type": "user_speak", "text": data.get("text", "")})
+            elif t == "remote_announce" and config.active_websocket:
+                # 直接TTS再生（ユーザー入力を介さない）
+                txt = data.get("text", "")
+                mp3 = await generate_cloud_audio(txt, config.system_settings["voice"],
+                                                  config.system_settings["rate"], config.system_settings["pitch"])
+                if mp3:
+                    b64 = base64.b64encode(mp3).decode()
+                    await config.active_websocket.send_json({
+                        "type": "audio", "audio": b64, "text": txt, "emotion": "neutral", "command": None,
+                    })
+            elif t == "remote_cmd":
+                action = data.get("action", "")
+                cmd_map = {
+                    "mirror":     {"type": "settings_changed"},
+                    "reset":      {"type": "text", "text": "会話をリセットしてください"},
+                    "game_start": {"type": "text", "text": "ゲームを始めましょう"},
+                    "status":     None,
+                }
+                if action in cmd_map and cmd_map[action] and config.active_websocket:
+                    await config.active_websocket.send_json(cmd_map[action])
+                elif action == "mute":
+                    await broadcast_remote({"type": "cmd_ack", "action": "mute"})
+                elif action == "unmute":
+                    await broadcast_remote({"type": "cmd_ack", "action": "unmute"})
+            elif t == "remote_status_req":
+                stats = get_stats()
+                await websocket.send_json({
+                    "type":  "status_update",
+                    "mode":  "ACTIVE" if config.active_websocket else "STANDBY",
+                    "today": stats.get("today_unique_visitors", 0),
+                    "now":   config.current_face_count,
+                })
+    except Exception:
+        pass
+    finally:
+        try:
+            config.remote_websockets.remove(websocket)
+        except ValueError:
+            pass
+        custom_log("INFO  ", "SYSTEM", "リモコン切断")
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     global camera_sensor
@@ -269,6 +395,8 @@ async def websocket_endpoint(websocket: WebSocket):
 
     chat = _make_sora_chat()
     session_log: list[dict] = []   # この接続セッションの会話ログ
+    # Ollama 用の会話履歴（Gemini chat と別管理）
+    ollama_history: list[dict] = []
 
     try:
         while True:
@@ -359,6 +487,14 @@ async def websocket_endpoint(websocket: WebSocket):
                 user_message = data.get("text")
                 session_log.append({"role": "user", "text": user_message})
                 custom_log("INFO  ", "SYSTEM", f"ユーザー入力データの受信: 「{user_message}」")
+                # リモコンにユーザー発話を通知
+                await broadcast_remote({"type": "user_speak", "text": user_message})
+                # ナレッジベース検索・注入
+                knowledge_ctx = await asyncio.to_thread(knowledge_search, user_message)
+                enriched_message = user_message
+                if knowledge_ctx:
+                    enriched_message = f"{user_message}\n\n{knowledge_ctx}"
+                    custom_log("INFO  ", "SYSTEM", "ナレッジベースから関連情報を注入")
                 
                 try:
                     if await should_request_vision(user_message):
@@ -391,15 +527,13 @@ async def websocket_endpoint(websocket: WebSocket):
                                     await websocket.send_json({"type": "end"})
                                     continue
 
-                    # send_message_stream は同期イテレータ。スレッドで実行し
-                    # イベントループのブロックを防ぐ。
-                    # 429 RESOURCE_EXHAUSTED の場合は retry-after に従い自動リトライ。
+                    # ── Gemini ストリームまたは Ollama フォールバック ──────
                     import time as _time
 
-                    def _collect_stream():
+                    def _collect_gemini():
                         for attempt in range(1, 4):
                             try:
-                                return list(chat.send_message_stream(user_message))
+                                return list(chat.send_message_stream(enriched_message))
                             except Exception as _e:
                                 _es = str(_e)
                                 if ('429' in _es or 'RESOURCE_EXHAUSTED' in _es) and attempt < 3:
@@ -411,7 +545,55 @@ async def websocket_endpoint(websocket: WebSocket):
                                     continue
                                 raise _e
 
-                    response = await asyncio.to_thread(_collect_stream)
+                    ollama_used = False
+                    if config.use_ollama_fallback:
+                        # 前回のセッションで切り替え済みならOllamaを優先
+                        try:
+                            sys_prompt = _make_sora_chat.__doc__ or ""
+                            msgs = _build_ollama_history(
+                                "あなたはJ.A.R.V.I.S.をモデルとした等身大ホログラムAIアシスタント「ソラ」です。",
+                                session_log[:-1]
+                            )
+                            msgs.append({"role": "user", "content": enriched_message})
+                            ollama_raw = await call_ollama(msgs)
+                            # Gemini のチャンク形式に合わせてラップ
+                            class _FakeChunk:
+                                def __init__(self, t): self.text = t
+                            response = [_FakeChunk(ollama_raw)]
+                            ollama_used = True
+                            custom_log("INFO  ", "SYSTEM", "Ollamaフォールバックで応答生成")
+                        except Exception as oe:
+                            custom_log("WARN  ", "SYSTEM", f"Ollama失敗、Geminiで再試行: {oe}")
+                            config.use_ollama_fallback = False
+                            response = await asyncio.to_thread(_collect_gemini)
+                    else:
+                        try:
+                            response = await asyncio.to_thread(_collect_gemini)
+                        except Exception as _fe:
+                            _fes = str(_fe)
+                            if '429' in _fes or 'RESOURCE_EXHAUSTED' in _fes:
+                                # Gemini上限 → Ollamaへ切り替え試行
+                                custom_log("WARN  ", "SYSTEM", "Gemini上限到達。Ollamaへ切り替えを試みます")
+                                await websocket.send_json({"type": "system_error",
+                                    "text": "// FALLBACK: ローカルLLM(Ollama)に切り替え中..."})
+                                try:
+                                    msgs = _build_ollama_history(
+                                        "あなたはJ.A.R.V.I.S.をモデルとした等身大ホログラムAIアシスタント「ソラ」です。",
+                                        session_log[:-1]
+                                    )
+                                    msgs.append({"role": "user", "content": enriched_message})
+                                    ollama_raw = await call_ollama(msgs)
+                                    class _FakeChunk:
+                                        def __init__(self, t): self.text = t
+                                    response = [_FakeChunk(ollama_raw)]
+                                    config.use_ollama_fallback = True
+                                    ollama_used = True
+                                    custom_log("INFO  ", "SYSTEM", "Ollamaフォールバック成功")
+                                except Exception as oe2:
+                                    custom_log("ERROR ", "SYSTEM", f"Ollama失敗: {oe2}")
+                                    raise _fe
+                            else:
+                                raise _fe
                     sentence = ""
                     current_emotion = "neutral"
                     _reset_requested = False
@@ -585,9 +767,27 @@ async def websocket_endpoint(websocket: WebSocket):
                                 })
                             del pending_tts_tasks[next_send_index]
                             next_send_index += 1
+                    # AIの応答テキストを記録・リモコンに送信
+                    full_ai_text = " ".join(
+                        e["text"] for e in list(pending_tts_tasks.values()) + []
+                        if isinstance(e, dict) and e.get("text")
+                    )
+                    # buffered_textが残っている場合も含めて収集済みセグメントから組み立て
+                    ai_response_parts = []
+                    for seg_idx in range(next_send_index):
+                        pass  # already sent
+                    # 最終的な応答をリモコンへ（sentencesから再構成）
+                    await broadcast_remote({
+                        "type": "status_update",
+                        "mode": "STANDBY",
+                        "today": config.today_detected_count,
+                        "now": config.current_face_count,
+                    })
+
                     if _reset_requested:
                         chat = _make_sora_chat()
                         config.is_in_game = False
+                        ollama_history.clear()
                         custom_log("INFO  ", "SYSTEM", "会話履歴リセット完了・新規チャットセッション開始")
 
                 except Exception as stream_err:
@@ -616,9 +816,37 @@ async def websocket_endpoint(websocket: WebSocket):
                 asyncio.create_task(handle_face_registration(websocket))
                 continue
 
+            elif data.get("type") == "gesture_detected":
+                # ジェスチャーに対してソラが短く反応する
+                mark_user_activity()
+                g_msg = data.get("message", "")
+                if g_msg:
+                    config.is_interacting = True
+                    mp3 = await generate_cloud_audio(
+                        g_msg, config.system_settings["voice"],
+                        config.system_settings["rate"], config.system_settings["pitch"],
+                    )
+                    if mp3:
+                        b64 = base64.b64encode(mp3).decode()
+                        await websocket.send_json({
+                            "type": "audio", "audio": b64,
+                            "text": g_msg, "emotion": "happy", "command": None,
+                        })
+                    await websocket.send_json({"type": "end"})
+                    await broadcast_remote({"type": "sora_speak", "text": g_msg})
+                continue
+
             elif data.get("type") == "end_interaction":
                 config.is_interacting = False
                 custom_log("INFO  ", "SYSTEM", "対話ライフサイクルの完全終了・カメラ検知ゲートの再開放完了")
+                # リモコンにステータス更新を送信
+                stats = get_stats()
+                await broadcast_remote({
+                    "type": "status_update",
+                    "mode": "STANDBY",
+                    "today": stats.get("today_unique_visitors", 0),
+                    "now": config.current_face_count,
+                })
                 continue
 
     except Exception as e:

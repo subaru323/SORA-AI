@@ -264,6 +264,15 @@ function connectWebSocket() {
         if (!isStarted) return;
         const msg = JSON.parse(event.data);
 
+        if (msg.type === 'gesture_detected') {
+            // ジェスチャーをユーザー操作として処理
+            if (ws?.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'gesture_detected',
+                    gesture: msg.gesture, message: msg.message }));
+            }
+            return;
+        }
+
         if (msg.type === 'visitor_status') {
             const todayEl = document.getElementById('sys-today-count');
             const nowEl   = document.getElementById('sys-now-count');

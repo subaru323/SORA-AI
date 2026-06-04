@@ -13,6 +13,38 @@ from google import genai
 import config
 from visitors import compute_encoding, find_visitor, register_visitor, update_visitor, log_visit
 
+# ── ジェスチャー検知（MediaPipe Hands レガシー API） ──────────────
+_mp_hands   = mp.solutions.hands
+_hands_det  = _mp_hands.Hands(
+    static_image_mode=False,
+    max_num_hands=1,
+    min_detection_confidence=0.65,
+    min_tracking_confidence=0.5,
+)
+
+def _classify_gesture(hand_landmarks, img_h: int) -> str | None:
+    """
+    手のランドマークからジェスチャーを判定する。
+    返り値: 'wave' | 'thumbs_up' | None
+    """
+    lm = hand_landmarks.landmark
+    # 手首Y（0）と中指先端Y（12）の比較で「手を上げている」か判定
+    wrist_y     = lm[0].y
+    mid_tip_y   = lm[12].y
+    # 親指先端・人差指先端
+    thumb_tip   = lm[4]
+    index_tip   = lm[8]
+    index_mcp   = lm[5]
+
+    # 手が画面上半分かつ手首より指先が上 → wave
+    if wrist_y > 0.5 and mid_tip_y < wrist_y - 0.15:
+        # 親指が横に出ていて他の指が曲がっている → thumbs_up
+        if (thumb_tip.x > lm[2].x + 0.04 and
+                index_tip.y > index_mcp.y):
+            return 'thumbs_up'
+        return 'wave'
+    return None
+
 class CameraSensor:
     def __init__(self):
         self.face_task_path = "blaze_face_short_range.tflite"
@@ -193,6 +225,31 @@ class CameraSensor:
 
                     if config.main_loop:
                         asyncio.run_coroutine_threadsafe(self._process_spontaneous_greeting(local_features), config.main_loop)
+
+            # ── ジェスチャー認識 ────────────────────────────────────
+            if not config.is_interacting and (now - config.last_gesture_time > config.GESTURE_COOLDOWN_SEC):
+                try:
+                    hand_res = _hands_det.process(rgb_frame)
+                    if hand_res.multi_hand_landmarks:
+                        gesture = _classify_gesture(hand_res.multi_hand_landmarks[0], h)
+                        if gesture:
+                            config.last_gesture_time = now
+                            g_msg = {
+                                'wave':      "手を振っていただきました。ようこそ。",
+                                'thumbs_up': "ありがとうございます。喜んでいただけて光栄です。",
+                            }.get(gesture, "")
+                            if g_msg and config.active_websocket and config.main_loop:
+                                asyncio.run_coroutine_threadsafe(
+                                    config.active_websocket.send_json({
+                                        "type": "gesture_detected",
+                                        "gesture": gesture,
+                                        "message": g_msg,
+                                    }),
+                                    config.main_loop,
+                                )
+                                custom_log(" INFO ", "CAMERA", f"ジェスチャー検知: {gesture}")
+                except Exception as ge:
+                    pass  # ジェスチャー認識エラーは無視して続行
 
             # 顔検知数をconfigに反映し、変化があればWSへ通知
             face_count_now = len(face_result.detections) if face_result.detections else 0

@@ -10,3 +10,5 @@ python-dotenv
 cmake
 onnxruntime
 insightface
+httpx
+pypdf
