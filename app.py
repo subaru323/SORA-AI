@@ -948,6 +948,12 @@ async def _save_session_memory(session_log: list[dict]):
         custom_log("WARN  ", "SYSTEM", f"記憶保存に失敗: {e}")
 
 
+@app.get("/remote")
+async def remote_page():
+    from fastapi.responses import FileResponse
+    return FileResponse("static/remote.html")
+
+
 @app.get("/api/stats")
 async def api_stats():
     return get_stats()
