@@ -14,13 +14,20 @@ import config
 from visitors import compute_encoding, find_visitor, register_visitor, update_visitor, log_visit
 
 # ── ジェスチャー検知（MediaPipe Hands レガシー API） ──────────────
-_mp_hands   = mp.solutions.hands
-_hands_det  = _mp_hands.Hands(
-    static_image_mode=False,
-    max_num_hands=1,
-    min_detection_confidence=0.65,
-    min_tracking_confidence=0.5,
-)
+# 新しいバージョンの MediaPipe は mp.solutions を廃止している場合があるため
+# 利用可能な場合のみ有効化する
+_hands_det = None
+try:
+    _mp_hands  = mp.solutions.hands
+    _hands_det = _mp_hands.Hands(
+        static_image_mode=False,
+        max_num_hands=1,
+        min_detection_confidence=0.65,
+        min_tracking_confidence=0.5,
+    )
+except AttributeError:
+    pass  # MediaPipe 0.10+ で solutions が廃止された場合はジェスチャー無効
+
 
 def _classify_gesture(hand_landmarks, img_h: int) -> str | None:
     """
@@ -28,17 +35,13 @@ def _classify_gesture(hand_landmarks, img_h: int) -> str | None:
     返り値: 'wave' | 'thumbs_up' | None
     """
     lm = hand_landmarks.landmark
-    # 手首Y（0）と中指先端Y（12）の比較で「手を上げている」か判定
-    wrist_y     = lm[0].y
-    mid_tip_y   = lm[12].y
-    # 親指先端・人差指先端
-    thumb_tip   = lm[4]
-    index_tip   = lm[8]
-    index_mcp   = lm[5]
+    wrist_y   = lm[0].y
+    mid_tip_y = lm[12].y
+    thumb_tip = lm[4]
+    index_tip = lm[8]
+    index_mcp = lm[5]
 
-    # 手が画面上半分かつ手首より指先が上 → wave
     if wrist_y > 0.5 and mid_tip_y < wrist_y - 0.15:
-        # 親指が横に出ていて他の指が曲がっている → thumbs_up
         if (thumb_tip.x > lm[2].x + 0.04 and
                 index_tip.y > index_mcp.y):
             return 'thumbs_up'
@@ -227,7 +230,7 @@ class CameraSensor:
                         asyncio.run_coroutine_threadsafe(self._process_spontaneous_greeting(local_features), config.main_loop)
 
             # ── ジェスチャー認識 ────────────────────────────────────
-            if not config.is_interacting and (now - config.last_gesture_time > config.GESTURE_COOLDOWN_SEC):
+            if _hands_det and not config.is_interacting and (now - config.last_gesture_time > config.GESTURE_COOLDOWN_SEC):
                 try:
                     hand_res = _hands_det.process(rgb_frame)
                     if hand_res.multi_hand_landmarks:
