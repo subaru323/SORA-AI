@@ -85,6 +85,88 @@ Webカメラを「目」として空間を認識し、来場者に自発的に�
 - `http://localhost:8000/dashboard` でアクセス
 - 累計・本日のユニーク来場者数、来場回数ランキング、会話記憶一覧（30秒ごと自動更新）
 
+---
+
+## 🚧 開発中・テスト調整中の機能
+
+> 以下の機能は実装済みですが、現在テスト・調整中のため動作が変わる可能性があります。
+
+### 🤖 Ollama フォールバック
+Gemini API の上限到達時にローカルLLM（Ollama）へ自動切り替え。
+
+**セットアップ（任意）：**
+1. [ollama.com](https://ollama.com) からインストール
+2. `ollama pull gemma3:4b` でモデルをダウンロード
+3. 以後、429エラー発生時に自動的にローカルLLMへ切り替わる
+
+`.env` でモデルを変更可能：
+```env
+OLLAMA_MODEL=gemma3:4b
+OLLAMA_URL=http://localhost:11434
+```
+
+---
+
+### 📱 リモートコントロール
+スマホ・タブレットからオペレーター操作が可能なJARVIS風コントロール画面。
+
+```
+http://localhost:8000/remote        # 同じPCから
+http://[PCのIPアドレス]:8000/remote  # スマホ・タブレットから（同じWiFi）
+```
+
+| 操作 | 内容 |
+|---|---|
+| テキスト入力 | ソラに話しかける（SORA画面に反映） |
+| 挨拶 / 開始 / 終了 | 定型アナウンスを即時再生 |
+| MIRROR / MUTE / RESET | システム操作コマンド送信 |
+| 会話ログ表示 | ソラの応答をリアルタイム確認 |
+| TODAY / NOW 表示 | 来場者カウントをリアルタイム確認 |
+
+---
+
+### ✋ ジェスチャー認識
+カメラで手のポーズを検知してソラが自動反応する。**追加設定不要、自動で動作。**
+
+| ジェスチャー | ソラの反応 |
+|---|---|
+| 手を振る（wave） | 歓迎の挨拶 |
+| 親指を立てる（thumbs up） | ポジティブな反応 |
+
+> ⚠️ MediaPipe のバージョンによっては動作しない場合があります。
+
+---
+
+### 🔔 タイムテーブル自動アナウンス
+指定した時刻になると自動でソラが発話する。
+
+`data/timetable.json` を編集（初回起動時に自動生成）：
+```json
+[
+  {"time": "10:00", "message": "午前のプログラムを開始いたします。"},
+  {"time": "12:00", "message": "お昼休憩のお時間です。"},
+  {"time": "18:00", "message": "本日もご来場ありがとうございました。"}
+]
+```
+
+---
+
+### 📋 ナレッジベース
+FAQや商品説明などのテキストをSORAが参照して回答する。
+
+`data/knowledge/` フォルダにファイルを追加するだけで自動参照：
+- `.txt` / `.md` → そのまま読み込み
+- `.pdf` → テキスト自動抽出（pypdf使用）
+
+```
+data/knowledge/
+├── faq.txt       # よくある質問
+├── products.md   # 商品説明
+└── manual.pdf    # マニュアル
+```
+
+---
+
 ### 🎮 コマンドシステム
 ソラ自身が応答の中にコマンドタグを埋め込み、UIを自律制御します。
 
@@ -107,7 +189,7 @@ Webカメラを「目」として空間を認識し、来場者に自発的に�
 | カテゴリ | 技術 |
 |---|---|
 | **バックエンド** | Python 3.11+ / FastAPI / WebSocket |
-| **AI** | Google Gemini 2.5 Flash |
+| **AI** | Google Gemini 2.5 Flash（Ollamaフォールバック対応） |
 | **顔認識** | insightface + ONNX Runtime（ArcFace 512次元、CPU動作） |
 | **音声合成** | edge-tts（Microsoft Edge TTS） |
 | **音声認識** | Web Speech API |
@@ -135,12 +217,15 @@ SORA-AI/
 │   ├── memories.json   # 会話サマリー記録
 │   ├── visitors.json   # 来場者プロファイル（ArcFace埋め込み）
 │   └── visit_log.json  # 来場ログ
+├── timetable.py        # タイムテーブル自動アナウンス
+├── knowledge.py        # ナレッジベース（簡易RAG）
 └── static/
     ├── index.html      # メインUI（全幅ヘッダー・JARVISリングキャンバス）
     ├── style.css       # SORA // NEXUS デザインシステム
     ├── main.js         # フロントエンドロジック（感情パルス・登録フロー・来場者表示）
     ├── avatar.js       # VRMアバター制御（Three.js・感情ライティング）
-    └── dashboard.html  # 来場者分析ダッシュボード
+    ├── dashboard.html  # 来場者分析ダッシュボード
+    └── remote.html     # オペレーター用リモートコントロール画面 🚧
 ```
 
 ---
