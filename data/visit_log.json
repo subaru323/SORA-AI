@@ -730,5 +730,59 @@
     "timestamp": "2026-06-03T10:45:19.646269",
     "duration_sec": 0.0,
     "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-05T11:14:27.668899",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-05T11:20:16.643953",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-06-11T14:21:39.219692",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-07-24T23:41:21.980395",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-07-26T23:29:48.289898",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-07-26T23:32:36.187488",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-07-26T23:33:29.592821",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-07-26T23:56:24.137779",
+    "duration_sec": 0.0,
+    "topics": ""
+  },
+  {
+    "visitor_id": 2,
+    "timestamp": "2026-07-27T00:12:13.738131",
+    "duration_sec": 0.0,
+    "topics": ""
   }
 ]
