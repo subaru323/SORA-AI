@@ -8,6 +8,11 @@ let audioCtx        = null;
 let audioQueue      = [];
 let isPlayingAudio  = false;
 
+// 監視モード：管理画面の MONITOR タブから ?observer=1 で読み込まれた状態。
+// 受信専用で、マイク・音声再生・サーバーへの送信を一切行わない。
+const IS_OBSERVER = new URLSearchParams(location.search).has('observer');
+let observerSpeakTimer = null;
+
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 const recognition = new SpeechRecognition();
 recognition.lang            = 'ja-JP';
@@ -251,12 +256,16 @@ async function refreshCameraOptions(requestPermission = false) {
 
 // ── WebSocket ─────────────────────────────────────────────────
 function connectWebSocket() {
-    console.log('【通信管理】WebSocket 接続要求を開始します...');
-    ws = new WebSocket('ws://localhost:8000/ws');
+    // 監視モードは受信専用エンドポイントへ繋ぎ、実機ディスプレイの接続を奪わない
+    const path  = IS_OBSERVER ? '/ws/observer' : '/ws';
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    console.log(`【通信管理】WebSocket 接続要求を開始します... (${path})`);
+    ws = new WebSocket(`${proto}://${location.host}${path}`);
 
     ws.onopen = () => {
         console.log('【通信管理】FastAPI バックエンドとのパイプライン接続に成功しました。');
         updateStatusMode('STANDBY');
+        if (IS_OBSERVER) return;   // 監視モードはサーバーへ何も送らない
         if (isStarted) sendSettingsToServer();
     };
 
@@ -330,6 +339,20 @@ function connectWebSocket() {
             const m = rawText.match(/\[emotion:(.*?)\]/);
             if (m) { emotion = m[1]; rawText = rawText.replace(/\[emotion:.*?\]/, ''); }
             if (msg.command) executeVoiceCommand(msg.command);
+
+            // 監視モードは音声を鳴らさず、発話内容と表情のみ反映する。
+            // （iframe 内では AudioContext をユーザー操作なしに起動できず、
+            //   仮に鳴らせても実機と二重再生になるため）
+            if (IS_OBSERVER) {
+                appendMessage('ai', rawText);
+                setEmotionTheme(emotion);
+                if (window.playMotion) window.playMotion(emotion);
+                updateStatusMode('SPEAKING');
+                clearTimeout(observerSpeakTimer);
+                observerSpeakTimer = setTimeout(() => updateStatusMode('STANDBY'), 2500);
+                return;
+            }
+
             audioQueue.push({ bufferArray: bytesToBuffer(msg.audio), text: rawText, emotion });
             if (!isPlayingAudio) playNextInQueue();
         }
@@ -350,6 +373,7 @@ connectWebSocket();
 // ── Idle Timer ────────────────────────────────────────────────
 function resetIdleTimer() {
     stopIdleTimer();
+    if (IS_OBSERVER) return;   // 監視モードは独り言を要求しない
     if (!isStarted || isOptionsOpen || window.isSpeaking || isAiTurn) return;
     const ms = Math.floor(30000 + Math.random() * 60000);
     console.log(`【タイマー稼働】独り言まで: ${(ms/1000).toFixed(1)}s`);
@@ -391,6 +415,25 @@ function activateSystem() {
 }
 
 startBtn.addEventListener('click', activateSystem);
+
+// ── Observer Mode ─────────────────────────────────────────────
+// SYSTEM BOOT を経ずに描画だけ開始し、操作系 UI を隠す。
+function initObserverMode() {
+    isStarted = true;   // onmessage の受信ガードを通すために必要
+    chatLog.innerHTML = '';
+    appendMessage('status', '// MONITOR — 観測専用モード');
+    updateStatusMode('STANDBY');
+    initParticleSystem();
+
+    startBtn.disabled = true;
+    startBtn.style.display = 'none';
+    for (const id of ['text-input-area', 'config-btn']) {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    }
+}
+
+if (IS_OBSERVER) initObserverMode();
 
 window.addEventListener('keydown', event => {
     if (event.code === 'Space' && !isStarted) { event.preventDefault(); activateSystem(); }

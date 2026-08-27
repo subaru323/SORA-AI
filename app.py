@@ -1,7 +1,7 @@
 ﻿import sys
 import io
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(override=True)  # OS環境変数より .env を優先（古いキーが環境変数に残っていても正しく上書きされるように）
 
 # ─── Windows UTF-8 強制設定 ────────────────────────────────────────────────────
 # Google GenAI SDK / edge-tts が日本語文字列を処理する際に
@@ -23,7 +23,7 @@ import time
 import random
 from datetime import datetime
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, Request, Response
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 import edge_tts
@@ -35,6 +35,7 @@ from google.genai import types
 os.environ.setdefault("GLOG_minloglevel", "3")
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
 
+import auth
 import config
 from camera import CameraSensor
 from memory import get_memory_context, save_memory, get_all_memories
@@ -92,7 +93,7 @@ async def should_request_vision(user_message: str) -> bool:
         response = await retry_async_task(
             asyncio.to_thread,
             client.models.generate_content,
-            model='gemini-2.5-flash',
+            model='gemini-3.6-flash',
             contents=[
                 types.Content(role="user", parts=[
                     types.Part.from_text(text=gate_instruction),
@@ -130,7 +131,7 @@ async def generate_vision_based_answer(user_message: str):
         response = await retry_async_task(
             asyncio.to_thread,
             client.models.generate_content,
-            model='gemini-2.5-flash',
+            model='gemini-3.6-flash',
             contents=[
                 types.Content(
                     role="user",
@@ -214,6 +215,40 @@ app = FastAPI(lifespan=lifespan)
 client = genai.Client(api_key=config.GEMINI_API_KEY)
 
 
+# ── 管理画面の保護 ──────────────────────────────────────────────
+# ローカルからの直接アクセスは素通しにし、Cloudflare Tunnel 経由など
+# 外部からのアクセスにだけパスワードを要求する（判定条件は auth.py）。
+
+def _ws_authorized(websocket: WebSocket) -> bool:
+    if not auth.is_enabled():
+        return True
+    host = websocket.client.host if websocket.client else None
+    if not auth.is_remote(host, websocket.headers):
+        return True
+    return auth.check_cookie(websocket.cookies)
+
+
+@app.middleware("http")
+async def admin_auth_middleware(request: Request, call_next):
+    host = request.client.host if request.client else None
+    if not (auth.is_enabled() and auth.is_remote(host, request.headers)):
+        return await call_next(request)
+
+    if not (auth.check_basic(request.headers.get("authorization"))
+            or auth.check_cookie(request.cookies)):
+        return Response(status_code=401,
+                        headers={"WWW-Authenticate": 'Basic realm="SORA // ADMIN"'})
+
+    response = await call_next(request)
+    # WebSocket のハンドシェイクでは Authorization を送れないため、
+    # 認証が通った時点でクッキーを配り、WS 側はそれを検証する
+    https = (request.url.scheme == "https"
+             or request.headers.get("x-forwarded-proto") == "https")
+    response.set_cookie(auth.SESSION_COOKIE, auth.session_token(),
+                        httponly=True, samesite="lax", secure=https, max_age=86400)
+    return response
+
+
 # ── Ollama フォールバック ──────────────────────────────────────────
 async def call_ollama(messages: list[dict], max_tokens: int = 1024) -> str:
     """Ollama API を呼び出してテキスト応答を返す（非ストリーミング）"""
@@ -258,7 +293,7 @@ def _make_sora_chat():
     memory_ctx = get_memory_context()
     memory_section = f"\n{memory_ctx}\n" if memory_ctx else ""
     return client.chats.create(
-        model='gemini-2.5-flash',
+        model='gemini-3.6-flash',
         history=[
             types.Content(role="user", parts=[types.Part.from_text(text=f"""
 あなたは等身大ホログラムAIキャラクター「ソラ」です。
@@ -333,6 +368,9 @@ async def generate_cloud_audio(text: str, voice: str, rate: str, pitch: str) -> 
 @app.websocket("/ws/remote")
 async def remote_ws_endpoint(websocket: WebSocket):
     """オペレーター用リモコン WebSocket"""
+    if not _ws_authorized(websocket):
+        await websocket.close(code=1008)   # 1008 = Policy Violation
+        return
     await websocket.accept()
     config.remote_websockets.append(websocket)
     custom_log("INFO  ", "SYSTEM", "リモコン接続")
@@ -386,11 +424,59 @@ async def remote_ws_endpoint(websocket: WebSocket):
         custom_log("INFO  ", "SYSTEM", "リモコン切断")
 
 
+class DisplayBroadcaster:
+    """メイン表示への送信を、監視クライアント全員にも複製する薄いプロキシ。
+
+    既存の `config.active_websocket.send_json(...)` 呼び出しを一切変えずに、
+    管理画面の MONITOR タブへ同じ内容を届けるための仕組み。
+    実機への送信失敗はそのまま呼び出し元へ投げ、監視側の失敗は握り潰す。
+    """
+
+    def __init__(self, primary: WebSocket):
+        self.primary = primary
+
+    async def send_json(self, payload):
+        await self.primary.send_json(payload)
+        for obs in list(config.observer_websockets):
+            try:
+                await obs.send_json(payload)
+            except Exception:
+                if obs in config.observer_websockets:
+                    config.observer_websockets.remove(obs)
+
+
+@app.websocket("/ws/observer")
+async def websocket_observer(websocket: WebSocket):
+    """管理画面 MONITOR タブ用の受信専用ソケット。
+
+    active_websocket を書き換えないため、実機ディスプレイの接続を奪わない。
+    """
+    if not _ws_authorized(websocket):
+        await websocket.close(code=1008)
+        return
+    await websocket.accept()
+    config.observer_websockets.append(websocket)
+    custom_log("INFO  ", "SYSTEM", f"監視クライアント接続 (計{len(config.observer_websockets)}台)")
+    try:
+        while True:
+            await websocket.receive_text()   # 接続保持のみ。受信内容は使わない
+    except Exception:
+        pass
+    finally:
+        if websocket in config.observer_websockets:
+            config.observer_websockets.remove(websocket)
+        custom_log("INFO  ", "SYSTEM", "監視クライアント切断")
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     global camera_sensor
+    # 外部から実機ディスプレイの接続を奪われないよう、ここも保護する
+    if not _ws_authorized(websocket):
+        await websocket.close(code=1008)
+        return
     await websocket.accept()
-    config.active_websocket = websocket
+    config.active_websocket = DisplayBroadcaster(websocket)
     custom_log("INFO  ", "SYSTEM", "WebSocket通信の確立完了")
 
     chat = _make_sora_chat()
@@ -427,7 +513,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 system_instruction = "あなたはJ.A.R.V.I.S.をモデルとした等身大ホログラムAIアシスタント「ソラ」です。必ず冒頭に [emotion:感情名] を付けて、設定変更への反応をJARVISらしく洗練されたトーンで、25文字程度で短く1文で言ってください。"
                 
                 try:
-                    response = await retry_async_task(asyncio.to_thread, client.models.generate_content, model='gemini-2.5-flash', contents=system_instruction)
+                    response = await retry_async_task(asyncio.to_thread, client.models.generate_content, model='gemini-3.6-flash', contents=system_instruction)
                     reply_text = response.text.strip()
                 except Exception:
                     reply_text = "[emotion:happy]設定を更新しました。承知いたしました。"
@@ -461,7 +547,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 )
 
                 try:
-                    response = await retry_async_task(asyncio.to_thread, client.models.generate_content, model='gemini-2.5-flash', contents=system_instruction)
+                    response = await retry_async_task(asyncio.to_thread, client.models.generate_content, model='gemini-3.6-flash', contents=system_instruction)
                     reply_text = response.text.strip()
                 except Exception:
                     reply_text = "[emotion:neutral]スタンバイモード。いつでもお声がけください。"
@@ -937,7 +1023,7 @@ async def _save_session_memory(session_log: list[dict]):
         )
         response = await asyncio.to_thread(
             client.models.generate_content,
-            model='gemini-2.5-flash',
+            model='gemini-3.6-flash',
             contents=prompt
         )
         summary = (response.text or "").strip()
@@ -954,9 +1040,23 @@ async def remote_page():
     return FileResponse("static/remote.html")
 
 
+@app.get("/admin")
+async def admin_page():
+    from fastapi.responses import FileResponse
+    return FileResponse("static/admin.html")
+
+
 @app.get("/api/stats")
 async def api_stats():
     return get_stats()
+
+
+@app.get("/api/camera/frame")
+async def api_camera_frame():
+    if config.latest_camera_frame_b64 is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=503, detail="No frame available")
+    return {"image": config.latest_camera_frame_b64, "ts": config.latest_camera_frame_ts}
 
 
 @app.get("/api/memories")

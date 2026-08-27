@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SORA // ADMIN</title>
+<style>
+:root {
+    --ec: #00d4ff;
+    --ec-rgb: 0,212,255;
+    --bg: #000a12;
+    --bg2: #000d18;
+    --text: #cff4ff;
+    --text2: #3a8aaa;
+    --danger: #ff4433;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Header ── */
+#header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 16px;
+    background: rgba(0,0,0,0.8);
+    border-bottom: 1px solid rgba(var(--ec-rgb),0.2);
+    flex-shrink: 0;
+}
+#header h1 {
+    font-size: 15px;
+    color: var(--ec);
+    letter-spacing: .12em;
+    white-space: nowrap;
+}
+#ws-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    color: var(--text2);
+}
+#ws-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--danger);
+    transition: background .3s;
+    flex-shrink: 0;
+}
+#ws-dot.on { background: #00ff88; box-shadow: 0 0 5px #00ff88; }
+
+/* ── Tabs ── */
+#tabs {
+    display: flex;
+    margin-left: auto;
+    gap: 4px;
+}
+.tab-btn {
+    background: transparent;
+    border: 1px solid rgba(var(--ec-rgb),0.25);
+    color: var(--text2);
+    padding: 5px 14px;
+    font-size: 11px;
+    font-family: monospace;
+    letter-spacing: .08em;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all .15s;
+}
+.tab-btn.active {
+    background: rgba(var(--ec-rgb),0.12);
+    border-color: var(--ec);
+    color: var(--ec);
+}
+.tab-btn:hover:not(.active) {
+    border-color: rgba(var(--ec-rgb),0.5);
+    color: var(--text);
+}
+
+/* ── Tab Panels ── */
+.tab-panel { display: none; flex: 1; flex-direction: column; min-height: 0; }
+.tab-panel.active { display: flex; }
+
+/* ════════════════════════════
+   REMOTE TAB
+════════════════════════════ */
+
+/* Chat Log */
+#chat-log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+}
+.msg {
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 8px 12px;
+    border-radius: 6px;
+    max-width: 90%;
+}
+.msg.sora {
+    align-self: flex-start;
+    background: rgba(var(--ec-rgb),.07);
+    border-left: 2px solid var(--ec);
+    color: var(--ec);
+}
+.msg.user {
+    align-self: flex-end;
+    background: rgba(255,255,255,.06);
+    border-right: 2px solid rgba(255,255,255,.3);
+    color: rgba(255,255,255,.7);
+}
+.msg.sys {
+    align-self: center;
+    font-size: 11px;
+    color: var(--text2);
+    background: rgba(0,0,0,.4);
+    border: 1px solid rgba(var(--ec-rgb),.1);
+    border-radius: 4px;
+    padding: 4px 10px;
+}
+.msg-label {
+    font-size: 9px;
+    letter-spacing: .1em;
+    opacity: .6;
+    margin-bottom: 2px;
+}
+
+/* Status Bar */
+#status-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding: 8px 14px;
+    background: rgba(0,0,0,.5);
+    border-top: 1px solid rgba(var(--ec-rgb),.08);
+    flex-shrink: 0;
+}
+.stat-cell { text-align: center; }
+.stat-lbl { font-size: 9px; color: var(--text2); letter-spacing: .08em; }
+.stat-val { font-size: 14px; font-weight: bold; color: var(--ec); }
+
+/* Quick Actions */
+#quick-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding: 8px 14px;
+    flex-shrink: 0;
+}
+.qa-btn {
+    background: transparent;
+    border: 1px solid rgba(var(--ec-rgb),.3);
+    color: var(--ec);
+    border-radius: 6px;
+    padding: 8px 4px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: monospace;
+    letter-spacing: .05em;
+    transition: all .15s;
+}
+.qa-btn:hover { background: rgba(var(--ec-rgb),.12); border-color: var(--ec); }
+.qa-btn.danger { border-color: rgba(255,68,51,.4); color: #ff6644; }
+.qa-btn.danger:hover { background: rgba(255,68,51,.1); }
+
+/* Input */
+#input-area {
+    display: flex;
+    gap: 8px;
+    padding: 10px 14px 14px;
+    flex-shrink: 0;
+    border-top: 1px solid rgba(var(--ec-rgb),.1);
+}
+#msg-input {
+    flex: 1;
+    background: rgba(0,0,0,.6);
+    border: 1px solid rgba(var(--ec-rgb),.3);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 9px 12px;
+    font-size: 13px;
+    font-family: monospace;
+    outline: none;
+}
+#msg-input:focus { border-color: var(--ec); box-shadow: 0 0 8px rgba(var(--ec-rgb),.2); }
+#send-btn {
+    background: transparent;
+    border: 1px solid var(--ec);
+    color: var(--ec);
+    border-radius: 6px;
+    padding: 0 16px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: monospace;
+    font-weight: bold;
+    letter-spacing: .06em;
+}
+#send-btn:hover { background: rgba(var(--ec-rgb),.1); }
+
+/* ════════════════════════════
+   ANALYTICS TAB
+════════════════════════════ */
+#analytics-panel {
+    overflow-y: auto;
+    padding: 20px 16px;
+}
+
+/* Refresh bar */
+#analytics-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-bottom: 16px;
+    font-size: 11px;
+    color: var(--text2);
+}
+#refresh-btn {
+    background: transparent;
+    border: 1px solid rgba(var(--ec-rgb),.4);
+    color: var(--ec);
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 11px;
+    transition: background .15s;
+}
+#refresh-btn:hover { background: rgba(var(--ec-rgb),.1); }
+
+/* Stat Cards */
+#stat-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.stat-card {
+    background: rgba(var(--ec-rgb),.04);
+    border: 1px solid rgba(var(--ec-rgb),.15);
+    border-radius: 8px;
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+}
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: var(--ec);
+    opacity: 0.5;
+}
+.card-label {
+    font-size: 9px;
+    letter-spacing: .14em;
+    color: var(--text2);
+    margin-bottom: 6px;
+}
+.card-value {
+    font-size: 32px;
+    font-weight: bold;
+    color: var(--ec);
+    line-height: 1;
+}
+.card-sub {
+    font-size: 10px;
+    color: var(--text2);
+    margin-top: 4px;
+    opacity: 0.7;
+}
+
+/* Panels */
+.panel {
+    background: rgba(var(--ec-rgb),.025);
+    border: 1px solid rgba(var(--ec-rgb),.12);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 14px;
+}
+.panel-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(var(--ec-rgb),.1);
+    font-size: 12px;
+    letter-spacing: .08em;
+    color: var(--ec);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.panel-header span { font-size: 10px; color: var(--text2); }
+.panel-body { padding: 12px 14px; }
+
+/* Table */
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th {
+    text-align: left;
+    color: var(--text2);
+    font-size: 10px;
+    letter-spacing: .1em;
+    padding: 0 0 8px;
+    border-bottom: 1px solid rgba(var(--ec-rgb),.1);
+}
+td {
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(var(--ec-rgb),.05);
+    color: var(--text);
+    font-size: 12px;
+}
+tr:last-child td { border-bottom: none; }
+.badge {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    background: rgba(var(--ec-rgb),.1);
+    color: var(--ec);
+    border: 1px solid rgba(var(--ec-rgb),.3);
+}
+
+/* Memory */
+.memory-item {
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(var(--ec-rgb),.06);
+    font-size: 12px;
+    line-height: 1.5;
+}
+.memory-item:last-child { border-bottom: none; }
+.memory-date { font-size: 10px; color: var(--text2); margin-bottom: 2px; }
+
+/* Empty / Loading */
+.empty {
+    text-align: center;
+    color: var(--text2);
+    padding: 24px 0;
+    font-size: 12px;
+    opacity: 0.5;
+    letter-spacing: .1em;
+}
+#analytics-loading {
+    text-align: center;
+    padding: 48px;
+    color: var(--ec);
+    font-size: 14px;
+    letter-spacing: .15em;
+    animation: pulse 1.5s ease-in-out infinite alternate;
+}
+@keyframes pulse { from { opacity:.3; } to { opacity:1; } }
+
+/* ════════════════════════════
+   MONITOR TAB
+════════════════════════════ */
+#monitor-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 10px;
+    height: 100%;
+}
+.monitor-pane {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(var(--ec-rgb),.2);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+}
+.monitor-label {
+    padding: 6px 12px;
+    font-size: 10px;
+    letter-spacing: .1em;
+    color: var(--ec);
+    border-bottom: 1px solid rgba(var(--ec-rgb),.15);
+    background: rgba(0,0,0,.7);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.monitor-label span {
+    font-size: 9px;
+    color: var(--text2);
+}
+#sora-iframe {
+    flex: 1;
+    width: 100%;
+    border: none;
+    background: #000;
+    /* 観測専用ペイン。クリック・スクロール等の操作は一切通さない */
+    pointer-events: none;
+}
+#cam-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background: #000509;
+}
+#cam-img {
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+    object-fit: contain;
+}
+#cam-offline {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    letter-spacing: .15em;
+    color: var(--text2);
+    opacity: .5;
+}
+@media (max-width: 700px) {
+    #monitor-layout { grid-template-columns: 1fr; }
+}
+
+/* Scanline */
+body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg, transparent, transparent 3px,
+        rgba(var(--ec-rgb),0.008) 3px, rgba(var(--ec-rgb),0.008) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div id="header">
+    <h1>// SORA ADMIN</h1>
+    <div id="ws-indicator">
+        <span id="ws-dot"></span>
+        <span id="ws-status">OFFLINE</span>
+    </div>
+    <div id="tabs">
+        <button class="tab-btn active" onclick="switchTab('remote')">REMOTE</button>
+        <button class="tab-btn" onclick="switchTab('analytics')">ANALYTICS</button>
+        <button class="tab-btn" onclick="switchTab('monitor')">MONITOR</button>
+    </div>
+</div>
+
+<!-- ── REMOTE TAB ── -->
+<div id="tab-remote" class="tab-panel active">
+
+    <div id="chat-log">
+        <div class="msg sys">オペレーター画面 — SORAに接続中...</div>
+    </div>
+
+    <div id="status-bar">
+        <div class="stat-cell">
+            <div class="stat-lbl">STATUS</div>
+            <div class="stat-val" id="s-mode">--</div>
+        </div>
+        <div class="stat-cell">
+            <div class="stat-lbl">TODAY</div>
+            <div class="stat-val" id="s-today">--</div>
+        </div>
+        <div class="stat-cell">
+            <div class="stat-lbl">NOW</div>
+            <div class="stat-val" id="s-now">--</div>
+        </div>
+    </div>
+
+    <div id="quick-actions">
+        <button class="qa-btn" onclick="cmd('mirror')">🔄 MIRROR</button>
+        <button class="qa-btn" onclick="cmd('mute')">🔇 MUTE</button>
+        <button class="qa-btn" onclick="cmd('unmute')">🔊 UNMUTE</button>
+        <button class="qa-btn" onclick="announce('いらっしゃいませ。本日はご来場ありがとうございます。')">👋 挨拶</button>
+        <button class="qa-btn" onclick="announce('ただいまより説明を開始いたします。')">📢 開始</button>
+        <button class="qa-btn" onclick="announce('以上で本日の説明を終了いたします。')">🏁 終了</button>
+        <button class="qa-btn danger" onclick="cmd('reset')">🔃 RESET</button>
+        <button class="qa-btn" onclick="cmd('game_start')">🎮 GAME</button>
+        <button class="qa-btn" onclick="cmd('status')">📊 STATUS</button>
+    </div>
+
+    <div id="input-area">
+        <input type="text" id="msg-input" placeholder="SORAに話しかける..." autocomplete="off">
+        <button id="send-btn" onclick="sendMsg()">SEND</button>
+    </div>
+</div>
+
+<!-- ── MONITOR TAB ── -->
+<div id="tab-monitor" class="tab-panel">
+    <div id="monitor-layout">
+        <div class="monitor-pane" id="monitor-main">
+            <div class="monitor-label">▸ SORA DISPLAY</div>
+            <iframe id="sora-iframe" src="/?observer=1" frameborder="0" scrolling="no"></iframe>
+        </div>
+        <div class="monitor-pane" id="monitor-cam">
+            <div class="monitor-label">▸ CAMERA FEED <span id="cam-status">—</span></div>
+            <div id="cam-wrapper">
+                <img id="cam-img" alt="camera feed">
+                <div id="cam-offline">CAMERA OFFLINE</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── ANALYTICS TAB ── -->
+<div id="tab-analytics" class="tab-panel">
+    <div id="analytics-panel">
+
+        <div id="analytics-header">
+            <span id="last-updated">—</span>
+            <button id="refresh-btn" onclick="loadStats()">⟳ REFRESH</button>
+        </div>
+
+        <div id="analytics-loading">LOADING DATA...</div>
+
+        <div id="analytics-content" style="display:none">
+
+            <div id="stat-cards">
+                <div class="stat-card">
+                    <div class="card-label">TOTAL VISITORS</div>
+                    <div class="card-value" id="s-total-uv">—</div>
+                    <div class="card-sub">ユニーク来場者数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="card-label">TODAY VISITORS</div>
+                    <div class="card-value" id="s-today-uv">—</div>
+                    <div class="card-sub">本日のユニーク来場者</div>
+                </div>
+                <div class="stat-card">
+                    <div class="card-label">TOTAL VISITS</div>
+                    <div class="card-value" id="s-total-v">—</div>
+                    <div class="card-sub">累計来場回数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="card-label">TODAY VISITS</div>
+                    <div class="card-value" id="s-today-v">—</div>
+                    <div class="card-sub">本日の来場回数</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">▸ VISITOR RANKING</div>
+                <div class="panel-body">
+                    <table>
+                        <thead>
+                            <tr><th>ID</th><th>VISITS</th><th>FIRST</th><th>LAST</th><th></th></tr>
+                        </thead>
+                        <tbody id="visitor-table"></tbody>
+                    </table>
+                    <div class="empty" id="visitor-empty" style="display:none">NO VISITORS YET</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">▸ RECENT ACTIVITY</div>
+                <div class="panel-body">
+                    <table>
+                        <thead>
+                            <tr><th>TIME</th><th>VISITOR</th><th>DURATION</th></tr>
+                        </thead>
+                        <tbody id="log-table"></tbody>
+                    </table>
+                    <div class="empty" id="log-empty" style="display:none">NO ACTIVITY YET</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    ▸ CONVERSATION MEMORY
+                    <span id="memory-count"></span>
+                </div>
+                <div class="panel-body" id="memory-list"></div>
+                <div class="empty" id="memory-empty" style="display:none; padding:24px;">NO MEMORIES YET</div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Tab switching ──────────────────────────────
+const TAB_NAMES = ['remote', 'analytics', 'monitor'];
+function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach((b, i) => {
+        b.classList.toggle('active', TAB_NAMES[i] === name);
+    });
+    document.querySelectorAll('.tab-panel').forEach(p => {
+        p.classList.toggle('active', p.id === 'tab-' + name);
+    });
+    if (name === 'analytics') loadStats();
+    if (name === 'monitor')   startCamFeed();
+    else                      stopCamFeed();
+}
+
+// ── WebSocket (REMOTE) ────────────────────────
+let ws = null;
+
+function connect() {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${proto}://${location.host}/ws/remote`);
+
+    ws.onopen = () => {
+        document.getElementById('ws-dot').classList.add('on');
+        document.getElementById('ws-status').textContent = 'ONLINE';
+        addMsg('sys', '接続しました');
+    };
+
+    ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'sora_speak')    addMsg('sora', msg.text);
+        if (msg.type === 'user_speak')    addMsg('user', msg.text);
+        if (msg.type === 'status_update') {
+            document.getElementById('s-mode').textContent  = msg.mode  || '--';
+            document.getElementById('s-today').textContent = msg.today != null ? msg.today + '人' : '--';
+            document.getElementById('s-now').textContent   = msg.now   != null ? msg.now + '人'   : '--';
+        }
+        if (msg.type === 'system_error') addMsg('sys', '⚠ ' + msg.text);
+    };
+
+    ws.onclose = () => {
+        document.getElementById('ws-dot').classList.remove('on');
+        document.getElementById('ws-status').textContent = 'OFFLINE';
+        addMsg('sys', '切断 — 3秒後に再接続...');
+        setTimeout(connect, 3000);
+    };
+}
+
+function addMsg(role, text) {
+    const log = document.getElementById('chat-log');
+    const div = document.createElement('div');
+    div.className = `msg ${role}`;
+    if (role !== 'sys') {
+        const lbl = document.createElement('div');
+        lbl.className = 'msg-label';
+        lbl.textContent = role === 'sora' ? 'SORA' : 'USER';
+        div.appendChild(lbl);
+    }
+    const t = document.createElement('span');
+    t.textContent = text;
+    div.appendChild(t);
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+}
+
+function sendMsg() {
+    const input = document.getElementById('msg-input');
+    const text = input.value.trim();
+    if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'remote_speak', text }));
+    input.value = '';
+}
+
+function announce(text) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'remote_announce', text }));
+    addMsg('sys', '📢 ' + text);
+}
+
+function cmd(action) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'remote_cmd', action }));
+    addMsg('sys', `CMD: ${action}`);
+}
+
+document.getElementById('msg-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); sendMsg(); }
+});
+
+// ── Analytics ─────────────────────────────────
+let statsTimer = null;
+
+async function loadStats() {
+    try {
+        const [statsRes, memRes] = await Promise.all([
+            fetch('/api/stats'),
+            fetch('/api/memories'),
+        ]);
+        const stats   = await statsRes.json();
+        const memData = await memRes.json();
+        renderStats(stats, memData);
+        document.getElementById('last-updated').textContent =
+            new Date().toLocaleTimeString('ja-JP');
+    } catch(e) {
+        document.getElementById('analytics-loading').textContent = 'ERROR: ' + e.message;
+    }
+}
+
+function renderStats(stats, memories) {
+    document.getElementById('analytics-loading').style.display = 'none';
+    document.getElementById('analytics-content').style.display = 'block';
+
+    document.getElementById('s-total-uv').textContent = stats.total_unique_visitors;
+    document.getElementById('s-today-uv').textContent = stats.today_unique_visitors;
+    document.getElementById('s-total-v').textContent  = stats.total_visits;
+    document.getElementById('s-today-v').textContent  = stats.today_visits;
+
+    const vtbody = document.getElementById('visitor-table');
+    vtbody.innerHTML = '';
+    if (!stats.visitor_list.length) {
+        document.getElementById('visitor-empty').style.display = 'block';
+    } else {
+        stats.visitor_list.slice(0,10).forEach((v, i) => {
+            vtbody.innerHTML += `<tr>
+                <td>VISITOR-${String(v.id).padStart(3,'0')}</td>
+                <td><span class="badge">${v.visit_count} visits</span></td>
+                <td>${v.first_visit}</td>
+                <td>${v.last_visit}</td>
+                <td>${i === 0 ? '<span class="badge">★ TOP</span>' : ''}</td>
+            </tr>`;
+        });
+    }
+
+    const ltbody = document.getElementById('log-table');
+    ltbody.innerHTML = '';
+    if (!stats.recent_logs.length) {
+        document.getElementById('log-empty').style.display = 'block';
+    } else {
+        stats.recent_logs.slice(0,15).forEach(l => {
+            const time = new Date(l.timestamp).toLocaleString('ja-JP', {
+                month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'
+            });
+            const dur = l.duration_sec > 0 ? `${l.duration_sec}s` : '—';
+            ltbody.innerHTML += `<tr>
+                <td>${time}</td>
+                <td>VISITOR-${String(l.visitor_id).padStart(3,'0')}</td>
+                <td>${dur}</td>
+            </tr>`;
+        });
+    }
+
+    const mlist = document.getElementById('memory-list');
+    mlist.innerHTML = '';
+    if (!memories.length) {
+        document.getElementById('memory-empty').style.display = 'block';
+    } else {
+        document.getElementById('memory-count').textContent = `${memories.length} entries`;
+        [...memories].reverse().slice(0,20).forEach(m => {
+            mlist.innerHTML += `<div class="memory-item">
+                <div class="memory-date">${m.date.slice(0,16).replace('T',' ')}</div>
+                <div class="memory-text">${m.summary}</div>
+            </div>`;
+        });
+    }
+
+    if (!statsTimer) statsTimer = setInterval(loadStats, 30000);
+}
+
+// ── Camera feed (MONITOR tab) ─────────────────
+// サーバーからの push を受け取る。HTTP ポーリングと違い、同じフレームを
+// 取り直したり取りこぼしたりせず、カメラが出す 1 枚がそのまま 1 回届く。
+let camWs = null;
+let camWantsFeed = false;
+
+function setCamOffline() {
+    document.getElementById('cam-img').style.display = 'none';
+    document.getElementById('cam-offline').style.display = 'flex';
+    document.getElementById('cam-status').textContent = 'OFFLINE';
+}
+
+function startCamFeed() {
+    camWantsFeed = true;
+    if (camWs && (camWs.readyState === WebSocket.OPEN ||
+                  camWs.readyState === WebSocket.CONNECTING)) return;
+
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    camWs = new WebSocket(`${proto}://${location.host}/ws/observer`);
+
+    camWs.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg.type !== 'camera_preview') return;
+        const img = document.getElementById('cam-img');
+        img.src = 'data:image/jpeg;base64,' + msg.image;
+        img.style.display = 'block';
+        document.getElementById('cam-offline').style.display = 'none';
+        document.getElementById('cam-status').textContent = 'LIVE';
+    };
+
+    camWs.onclose = () => {
+        setCamOffline();
+        if (camWantsFeed) setTimeout(startCamFeed, 3000);
+    };
+}
+
+function stopCamFeed() {
+    camWantsFeed = false;
+    if (camWs) { camWs.close(); camWs = null; }
+}
+
+connect();
+</script>
+</body>
+</html>

@@ -29,6 +29,11 @@ use_ollama_fallback = False  # 429等でOllamaに切り替わった場合True
 # --- リモートコントロール ---
 remote_websockets: list = []  # 接続中のリモコン WebSocket クライアント
 
+# --- 監視（MONITOR）---
+# 管理画面から実機ディスプレイを覗くだけの受信専用クライアント。
+# active_websocket とは別管理にして、実機の接続を奪わないようにする。
+observer_websockets: list = []
+
 # --- ジェスチャー ---
 last_gesture_time = 0.0       # 最後にジェスチャー検知した時刻
 GESTURE_COOLDOWN_SEC = 12.0   # 同一ジェスチャーの最小間隔
