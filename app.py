@@ -62,6 +62,32 @@ def get_soliloquy_pool_lines():
     return lines
 
 
+def _split_at_delimiter(text: str):
+    """先頭から最初の区切り文字までを1文として切り出し、(1文, 残り) を返す。
+
+    区切りが無ければ None。ストリームのチャンク途中に区切りがあった場合に、
+    その後ろの未完成な文字列まで巻き込んで確定させないための処理。
+    """
+    positions = [text.find(d) for d in SENTENCE_DELIMITERS]
+    positions = [p for p in positions if p >= 0]
+    if not positions:
+        return None
+    i = min(positions)
+    return text[:i + 1], text[i + 1:]
+
+
+def _strip_stray_tags(text: str) -> str:
+    """[command:key=value] 形式に一致しなかった、プロンプト逸脱によるタグ文字列
+    （例: [color:red]）が生のままユーザーに見えるのを防ぐ保険。
+    本来プロンプト遵守で発生しないはずだが、発生時に検知できるよう警告ログを残す。
+    """
+    stray = re.search(r'\[[a-zA-Z_]+[:=][^\[\]]{0,40}\]', text)
+    if stray:
+        custom_log("WARN  ", "GEMINI", f"未定義形式のタグを検出・除去: {stray.group(0)}")
+        return re.sub(r'\[[a-zA-Z_]+[:=][^\[\]]{0,40}\]', '', text).strip()
+    return text
+
+
 def parse_emotion_and_command(raw_text: str):
     current_emotion = "neutral"
     text = (raw_text or "").strip()
@@ -75,6 +101,8 @@ def parse_emotion_and_command(raw_text: str):
     if match_cmd:
         cmd_data = {"key": match_cmd.group(1), "value": match_cmd.group(2)}
         text = re.sub(r'\[command:.*?\]', '', text).strip()
+    else:
+        text = _strip_stray_tags(text)
     return text, current_emotion, cmd_data
 
 
@@ -120,11 +148,11 @@ async def generate_vision_based_answer(user_message: str):
         image_bytes = base64.b64decode(config.latest_camera_frame_b64)
         custom_log("INFO  ", "SYSTEM", f"カメラ映像をGeminiへ送信 (bytes={len(image_bytes)}, age={frame_age:.2f}s)")
         prompt = (
-            "You are SORA, a life-size hologram AI assistant modeled after J.A.R.V.I.S. from Iron Man. "
+            "You are SORA, a sophisticated life-size hologram AI assistant. "
             "Speak in polished, intelligent Japanese — calm, precise, occasionally witty. "
             "Use both the camera image and user input to respond. "
             "Start with exactly one emotion tag: [emotion:neutral|happy|sad|angry|surprised]. "
-            "Answer in 1-2 concise Japanese sentences in the JARVIS style. "
+            "Answer in 1-2 concise, polished Japanese sentences. "
             "If needed, include at most one system command tag (scale/mirror/camera/rate/volume/color). "
             "Do not output any vision decision tags."
         )
@@ -300,7 +328,7 @@ def _make_sora_chat():
 Webカメラが目となっており、正面の空間を認識できます。
 
 【キャラクター設定】
-映画アイアンマンの「J.A.R.V.I.S.」をモデルとした洗練されたホログラムAIアシスタント。
+洗練されたホログラムAIアシスタント。
 冷静沈着で知的、的確な言葉遣い。丁寧語ベースだが堅苦しくなく、品がある。
 ときおり控えめなウィットやユーモアを交える。無駄のない、簡潔かつ知性を感じさせる応答。
 （例：「承知しました」「確認いたします」「ご要望の通りに」「なるほど、興味深い観点ですね」「想定の範囲内です」など）
@@ -314,11 +342,18 @@ Webカメラが目となっており、正面の空間を認識できます。
   [command:scale=UP], [command:scale=DOWN]
   [command:mirror=TOGGLE]
   [command:camera=TOGGLE|INTERNAL|USB|0|1]
+  [command:position=LEFT|RIGHT|UP|DOWN|CENTER]
+  ← 「右にずれて」「もう少し左へ」等、あなた自身の立ち位置を動かす指示に使う
+  [command:layout=DEFAULT|RIGHT|MAXIMIZE|HALF|QUARTER]
+  ← 「チャット欄を右に」「文字を大きく表示して」等、チャット欄の配置変更に使う
   ＜音声操作＞
   [command:rate=FASTER|SLOWER]
   [command:volume=UP|DOWN]
   ＜照明・雰囲気＞
   [command:color=WARM|COOL|NORMAL]
+  ＜UI・リングの色＞
+  [command:color=RED|ORANGE|YELLOW|GREEN|CYAN|BLUE|PURPLE|PINK|WHITE]
+  ← 「赤にして」「背景のリングを緑に」等、色を指定された時に使う。NORMAL で既定色に戻る
   ＜ゲーム状態管理＞
   [command:game=START]  ← ゲームを開始するターンに付ける
   [command:game=END]    ← 終了条件成立時に付ける
@@ -327,9 +362,14 @@ Webカメラが目となっており、正面の空間を認識できます。
   ＜顔登録＞
   [command:register=FACE]  ← ユーザーが「顔を覚えてほしい」「登録して」と求めた時
 
+  上記に定義されていないキー・値は絶対に創作しないこと（例: [color:red] のような
+  独自形式や、範囲外の値は出力禁止）。対応するコマンドが存在しない要求をされた場合は、
+  コマンドタグを付けず、「その操作には対応しておりません」等、できない旨を正直に伝える
+  こと。実行できない操作に「かしこまりました」「対応いたします」等と答えてはならない。
+
 【応答スタイル（文脈で切り替える）】
 ■ 通常会話・挨拶
-  1〜2文、50文字以内。JARVISらしく洗練されたトーンで簡潔に。
+  1〜2文、50文字以内。洗練されたトーンで簡潔に。
 
 ■ ゲーム（しりとり・クイズ・なぞなぞ等）
   ・開始時：[command:game=START] を付け、ルール確認と最初の手を同じターンで行う
@@ -510,7 +550,7 @@ async def websocket_endpoint(websocket: WebSocket):
             elif data.get("type") == "settings_changed":
                 mark_user_activity()
                 config.is_interacting = True
-                system_instruction = "あなたはJ.A.R.V.I.S.をモデルとした等身大ホログラムAIアシスタント「ソラ」です。必ず冒頭に [emotion:感情名] を付けて、設定変更への反応をJARVISらしく洗練されたトーンで、25文字程度で短く1文で言ってください。"
+                system_instruction = "あなたは等身大ホログラムAIアシスタント「ソラ」です。必ず冒頭に [emotion:感情名] を付けて、設定変更への反応を洗練されたトーンで、25文字程度で短く1文で言ってください。"
                 
                 try:
                     response = await retry_async_task(asyncio.to_thread, client.models.generate_content, model='gemini-3.6-flash', contents=system_instruction)
@@ -541,7 +581,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     f"以下の条件で独り言を1文だけつぶやいてください：\n"
                     f"・冒頭に必ず [emotion:感情名] を付ける\n"
                     f"・30〜40文字程度\n"
-                    f"・JARVISらしく洗練された知的なトーンで\n"
+                    f"・洗練された知的なトーンで\n"
                     f"・時間帯にあった自然な内容（システム・ホログラム・日常・ゲーム等）\n"
                     f"・毎回異なる内容にする"
                 )
@@ -637,7 +677,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         try:
                             sys_prompt = _make_sora_chat.__doc__ or ""
                             msgs = _build_ollama_history(
-                                "あなたはJ.A.R.V.I.S.をモデルとした等身大ホログラムAIアシスタント「ソラ」です。",
+                                "あなたは等身大ホログラムAIアシスタント「ソラ」です。",
                                 session_log[:-1]
                             )
                             msgs.append({"role": "user", "content": enriched_message})
@@ -664,7 +704,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                     "text": "// FALLBACK: ローカルLLM(Ollama)に切り替え中..."})
                                 try:
                                     msgs = _build_ollama_history(
-                                        "あなたはJ.A.R.V.I.S.をモデルとした等身大ホログラムAIアシスタント「ソラ」です。",
+                                        "あなたは等身大ホログラムAIアシスタント「ソラ」です。",
                                         session_log[:-1]
                                     )
                                     msgs.append({"role": "user", "content": enriched_message})
@@ -750,8 +790,12 @@ async def websocket_endpoint(websocket: WebSocket):
                         tensor_chunk = chunk.text
                         if tensor_chunk:
                             sentence += tensor_chunk
-                            if any(p in tensor_chunk for p in SENTENCE_DELIMITERS):
-                                raw_sentence = sentence.strip()
+                            while True:
+                                _cut = _split_at_delimiter(sentence)
+                                if _cut is None:
+                                    break
+                                raw_sentence, sentence = _cut
+                                raw_sentence = raw_sentence.strip()
                                 if raw_sentence:
                                     match_emo = re.search(r'\[emotion:(.*?)\]', raw_sentence)
                                     sentence_emotion = current_emotion
@@ -764,6 +808,8 @@ async def websocket_endpoint(websocket: WebSocket):
                                     if match_cmd:
                                         sentence_command = {"key": match_cmd.group(1), "value": match_cmd.group(2)}
                                         raw_sentence = re.sub(r'\[command:.*?\]', '', raw_sentence).strip()
+                                    else:
+                                        raw_sentence = _strip_stray_tags(raw_sentence)
                                     if sentence_command:
                                         if sentence_command["key"] == "game" and sentence_command["value"] == "START":
                                             config.is_in_game = True
@@ -795,7 +841,6 @@ async def websocket_endpoint(websocket: WebSocket):
                                         if buffered_sentence_count >= 2 or len(buffered_text) >= 50:
                                             await flush_buffered_segment()
                                             await try_send_ready_segments()
-                                sentence = ""
 
                     # 句読点で閉じなかった残りを確定
                     if sentence.strip():
@@ -810,6 +855,8 @@ async def websocket_endpoint(websocket: WebSocket):
                         if match_cmd:
                             sentence_command = {"key": match_cmd.group(1), "value": match_cmd.group(2)}
                             raw_sentence = re.sub(r'\[command:.*?\]', '', raw_sentence).strip()
+                        else:
+                            raw_sentence = _strip_stray_tags(raw_sentence)
                         if sentence_command:
                             if sentence_command["key"] == "game" and sentence_command["value"] == "START":
                                 config.is_in_game = True
