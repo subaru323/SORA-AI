@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   SORA // NEXUS  —  JARVIS-Inspired Design System
+   SORA // NEXUS  —  Futuristic Hologram Design System
    ══════════════════════════════════════════════════════════════ */
 
 /* ── Emotion Theme Variables ─────────────────────────────────── */
@@ -101,23 +101,38 @@ body {
 #emotion-flash.flash { animation: flash-anim 0.35s ease-out forwards; }
 @keyframes flash-anim { 0% { opacity:1; } 100% { opacity:0; } }
 
-/* ══════════════ LEFT PANEL ══════════════ */
+/* ══════════════ チャット欄（固定配置） ══════════════
+   常に既定配置に固定。移動・リサイズの操作手段は設けない。
+   top/left/width/height は main.js が画面寸法に合わせて設定する。 */
 #ui-panel {
-    width: 50vw; height: 100vh;
-    /* ヘッダー2段（48+34px=82px）分の上部余白 */
-    padding-top: 82px;
+    position: fixed;
+    top: 82px; left: 0;              /* ヘッダー2段（48+34px=82px）の下 */
+    width: 50vw; height: calc(100vh - 82px);
     /* 右端をフェードアウトしてアバター側と統一感を出す */
     background: linear-gradient(to right,
-        rgba(0,4,10,0.82) 0%,
-        rgba(0,4,10,0.70) 50%,
-        rgba(0,2,6,0.15)  85%,
-        transparent       100%
+        rgba(0,4,10,0.88) 0%,
+        rgba(0,4,10,0.78) 50%,
+        rgba(0,2,6,0.35)  85%,
+        rgba(0,2,6,0.20)  100%
     );
+    border: 1px solid rgba(var(--ec-rgb),0.15);
     display: flex; flex-direction: column;
-    position: relative; z-index: 50;
-    border-right: none;
+    z-index: 50;
     transition: background var(--spd);
     overflow: hidden;
+}
+/* ── Titlebar（ラベル表示のみ・操作不可） ───────────────────── */
+#panel-titlebar {
+    flex-shrink: 0;
+    height: 34px;
+    display: flex; align-items: center;
+    padding: 0 14px;
+    background: rgba(var(--ec-rgb),0.06);
+    border-bottom: 1px solid rgba(var(--ec-rgb),0.15);
+    user-select: none;
+}
+#panel-title {
+    font-size: 11px; letter-spacing: 0.1em; color: var(--ec); opacity: 0.85;
 }
 
 /* ── Status Bar（全幅・body直下） ─────────────────────────────── */
@@ -383,10 +398,11 @@ body {
     box-shadow: 0 0 40px rgba(var(--ec-rgb),0.4), inset 0 0 30px rgba(var(--ec-rgb),0.08);
 }
 
-/* ══════════════ RIGHT PANEL (AVATAR) ══════════════ */
+/* ══════════════ AVATAR BACKGROUND（常時全画面）══════════════ */
+/* チャットウィンドウが自由配置になったため、アバターは背景として常に画面全体を占める */
 #canvas-container {
-    width: 50vw; height: 100vh;
-    position: relative;
+    position: fixed; inset: 0;
+    width: 100vw; height: 100vh;
     z-index: 20;   /* particle-canvas(z:10)より上 → リングがアバターの後ろに */
     background: transparent; /* body の統一背景をそのまま透過 */
     overflow: hidden;
@@ -436,12 +452,12 @@ canvas {
 }
 @keyframes scan-down { 0%{top:-120px;} 100%{top:100%;} }
 
-/* JARVIS装飾はparticle-canvasに統合済み */
+/* NEXUS装飾はparticle-canvasに統合済み */
 
-/* ── JARVIS Ring Decorations ─────────────────────────────────── */
-/* リング・クロスヘア・パルスは jarvis-canvas（JS描画）に移行 */
+/* ── NEXUS Ring Decorations ─────────────────────────────────── */
+/* リング・クロスヘア・パルスは particle-canvas（JS描画）に移行 */
 
-/* コーナーアークも jarvis-canvas に移行 */
+/* コーナーアークも particle-canvas に移行 */
 
 /* Particle Canvas → body直下・全画面・フィルター外 */
 #particle-canvas {

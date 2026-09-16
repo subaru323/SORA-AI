@@ -35,6 +35,21 @@ let waitingPromptEl         = null;
 let cameraOptionsMeta       = [];
 let currentEmotionTheme     = 'neutral';
 
+// UI全体（リング・枠線・文字）の基準色。[command:color=RED] 等で差し替える。
+const UI_BASE_COLOR_DEFAULT = [0, 212, 255];
+const UI_COLOR_PRESETS = {
+    RED:    [255,  68,  51],
+    ORANGE: [255, 153,  51],
+    YELLOW: [255, 221,  68],
+    GREEN:  [ 68, 255, 136],
+    CYAN:   [  0, 212, 255],
+    BLUE:   [ 68, 136, 255],
+    PURPLE: [187, 102, 255],
+    PINK:   [255, 102, 187],
+    WHITE:  [255, 255, 255],
+};
+let uiBaseColor = UI_BASE_COLOR_DEFAULT;
+
 // クイック設定状態
 let qcOpen       = false;
 let voiceMuted   = false;
@@ -606,10 +621,42 @@ function executeVoiceCommand(cmd) {
         if (cmd.value === 'DOWN') window.audioGainNode.gain.value = Math.max(window.audioGainNode.gain.value - 0.2, 0.1);
 
     } else if (cmd.key === 'color') {
-        const map  = { WARM: 'sepia(0.3) hue-rotate(-10deg)', COOL: 'hue-rotate(30deg)', NORMAL: '' };
-        const col  = map[cmd.value] ?? '';
-        const base = `brightness(${pBright.value}) contrast(${pContrast.value}) saturate(${pSaturate.value})`;
-        filterContainer.style.filter = col ? `${base} ${col}` : base;
+        const value = String(cmd.value || '').toUpperCase();
+        if (UI_COLOR_PRESETS[value]) {
+            // 色名指定：UI全体（リング・枠線・文字）の基準色を差し替える
+            uiBaseColor = UI_COLOR_PRESETS[value];
+        } else {
+            // WARM / COOL / NORMAL：アバター側のフィルターで雰囲気を変える
+            if (value === 'NORMAL') uiBaseColor = UI_BASE_COLOR_DEFAULT;
+            const map  = { WARM: 'sepia(0.3) hue-rotate(-10deg)', COOL: 'hue-rotate(30deg)', NORMAL: '' };
+            const col  = map[value] ?? '';
+            const base = `brightness(${pBright.value}) contrast(${pContrast.value}) saturate(${pSaturate.value})`;
+            filterContainer.style.filter = col ? `${base} ${col}` : base;
+        }
+
+    } else if (cmd.key === 'layout') {
+        // チャット欄の配置。手動操作は設けず、この指示経由でのみ変更する
+        applyPanelLayout(String(cmd.value || 'DEFAULT').toUpperCase());
+
+    } else if (cmd.key === 'position') {
+        // アバターの表示位置。設定画面の Position X/Y スライダーを動かす
+        const v    = String(cmd.value || '').toUpperCase();
+        const xIn  = document.getElementById('param-vrm-x');
+        const yIn  = document.getElementById('param-vrm-y');
+        const STEP = 0.15;
+        const bump = (inp, delta, lo, hi) => {
+            inp.value = Math.min(Math.max(parseFloat(inp.value) + delta, lo), hi);
+            inp.dispatchEvent(new Event('input'));
+        };
+        // 画面はミラー反転しているため、見た目の左右とスライダーの符号は逆になる
+        if      (v === 'RIGHT')  bump(xIn, -STEP, -1.0, 1.0);
+        else if (v === 'LEFT')   bump(xIn,  STEP, -1.0, 1.0);
+        else if (v === 'UP')     bump(yIn,  STEP, -1.0, 1.0);
+        else if (v === 'DOWN')   bump(yIn, -STEP, -1.0, 1.0);
+        else if (v === 'CENTER') {
+            xIn.value = 0;     xIn.dispatchEvent(new Event('input'));
+            yIn.value = -0.15; yIn.dispatchEvent(new Event('input'));
+        }
 
     } else if (cmd.key === 'register' && cmd.value === 'FACE') {
         startFaceRegistration();
@@ -845,7 +892,7 @@ function animateParticles() {
     if (!particleCtx || !particleCanvas) return;
     particleCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
 
-    // ── JARVIS リング・クロスヘア描画 ────────────────────────
+    // ── NEXUS リング・クロスヘア描画 ────────────────────────
     jAngle += 0.0025;
     const W = particleCanvas.width, H = particleCanvas.height;
     if (W > 0 && H > 0) {
@@ -863,9 +910,10 @@ function animateParticles() {
         const rI    = D * 0.066;  // 内リング
         const rCore = D * 0.030;  // 中心コア
 
-        // JARVIS ブルーを軸にして感情ごとにゆっくりパルス
+        // 基準色を軸にして感情ごとにゆっくりパルス
         // → 計算結果を --ec / --ec-rgb に書き込んでUI全体も同期させる
-        const BLUE = [0, 212, 255];
+        // 毎フレーム再計算されるため、色変更は CSS 変数ではなく基準色側を差し替える
+        const BLUE = uiBaseColor;
         const EMOTION_COLORS = {
             happy:     [255, 221,  68],
             sad:       [ 68, 136, 255],
@@ -911,7 +959,7 @@ function animateParticles() {
         // 軌道ピップ（外リング上を周回）
         jOrbitalPip(particleCtx, cx, cy, rO, rgb, jAngle * 2.0);
 
-        // ── 3. 三角配置の太い弧（Iron Man 風・正回転）
+        // ── 3. 三角配置の太い弧（近未来風・正回転）
         jTriArc(particleCtx, cx, cy, rTri, rgb, D * 0.020, 0.9, jAngle * 0.7);
 
         // ── 4. セグメントリング（逆回転・8分割）
@@ -1083,7 +1131,7 @@ function handleRegisterMessage(msg) {
     }
 }
 
-// ── JARVIS UI Initialisation ──────────────────────────────────
+// ── NEXUS UI Initialisation ──────────────────────────────────
 
 /** 時計の更新 */
 function startSysClock() {
@@ -1113,7 +1161,7 @@ function setSysNet(online) {
     if (el) { el.textContent = online ? 'ONLINE' : 'OFFLINE'; el.style.color = online ? '' : '#ff4433'; }
 }
 
-// ── JARVIS Drawing Helpers ────────────────────────────────────
+// ── NEXUS Drawing Helpers ────────────────────────────────────
 let jAngle = 0;
 
 /** 実線リング */
@@ -1212,7 +1260,7 @@ function jThickArc(ctx, x, y, r, color, lw, alpha, start, arcLen) {
     ctx.lineCap = 'butt';
 }
 
-/** 三角配置の太い弧×3（Iron Man 風） */
+/** 三角配置の太い弧×3（近未来風） */
 function jTriArc(ctx, x, y, r, color, lw, alpha, rotation) {
     const span = Math.PI * 2 / 3 * 0.72;   // 各弧の長さ（隙間を残す）
     for (let i = 0; i < 3; i++) {
@@ -1377,12 +1425,13 @@ setEmotionTheme = function(emotion) {
 window.addEventListener('DOMContentLoaded', () => {
     initTextInputForm();
     initQuickConfig();
+    initPanelWindow();
     refreshCameraOptions(false);
     updateRatePitchLabels();
     updateCSSFilters();
     startSysClock();
     setSysNet(false);
-    // layout 計算完了後に particle/JARVIS 描画を開始
+    // layout 計算完了後に particle/NEXUS 描画を開始
     // (DOMContentLoaded 直後は clientWidth=0 になる場合があるため遅延)
     setTimeout(initParticleSystem, 300); // 初期はオフライン表示
 
@@ -1398,3 +1447,39 @@ window.addEventListener('DOMContentLoaded', () => {
 setInterval(() => {
     setPulseRings(!!window.isSpeaking);
 }, 200);
+
+// ── Chat Window（レイアウト）────────────────────────────────
+// 起動時は常に既定配置。ドラッグ・リサイズ・ボタン等の手動操作手段は設けず、
+// SORAへの指示（[command:layout=...]）でのみ変更する。
+// style.css の #ui-panel コメントに書いた 82px（ヘッダー2段分）と揃える。
+const PANEL_HEADER_H = 82;
+let currentPanelLayout = 'DEFAULT';
+let applyPanelLayout = () => {};   // 実体は initPanelWindow が設定する
+
+function initPanelWindow() {
+    const panel = document.getElementById('ui-panel');
+
+    function setRect(left, top, width, height) {
+        panel.style.left   = left   + 'px';
+        panel.style.top    = top    + 'px';
+        panel.style.width  = width  + 'px';
+        panel.style.height = height + 'px';
+    }
+
+    applyPanelLayout = function (name) {
+        const W = window.innerWidth;
+        const H = window.innerHeight - PANEL_HEADER_H;
+        switch (name) {
+            case 'RIGHT':    setRect(W * 0.5, PANEL_HEADER_H,           W * 0.5, H);       break;
+            case 'MAXIMIZE': setRect(0,       PANEL_HEADER_H,           W,       H);       break;
+            case 'HALF':     setRect(0,       PANEL_HEADER_H,           W * 0.5, H * 0.5); break;
+            case 'QUARTER':  setRect(0,       PANEL_HEADER_H,           W * 0.4, H * 0.5); break;
+            default:         setRect(0,       PANEL_HEADER_H,           W * 0.5, H);       break;
+        }
+        currentPanelLayout = name;
+    };
+
+    // ブラウザの寸法が変わっても現在のレイアウトを保ったまま追従させる
+    window.addEventListener('resize', () => applyPanelLayout(currentPanelLayout));
+    applyPanelLayout('DEFAULT');
+}
